@@ -187,13 +187,19 @@ Source : *Tesla Dashboard UI Component Library (Community)* — librairie basée
 
 | Phase | Contenu | Livrable |
 |---|---|---|
-| **0. Setup** | Repo + XcodeGen + workflow GitHub Actions (`.ipa` non signé), modèle 3D simplifié en USDZ, tokens + police Inter + icônes exportés du Figma | `.ipa` qui affiche la voiture sur l'iPad Pro |
+| **0. Setup** ✅ | Repo + XcodeGen + workflow GitHub Actions (`.ipa` non signé), modèle 3D simplifié en USDZ, tokens + police Inter + icônes exportés du Figma | `.ipa` qui affiche la voiture sur l'iPad Pro |
 | **1. Coquille UI** | Panneau gauche (PRND, vitesse, témoins), barre de statut, dock, panneau Réglages (arbre + Controls/Lights/Display…), lecteur média compact, clair/sombre, `SimulatorSource` | UI complète en données simulées |
 | **2. Voiture vivante + capteurs** | CoreMotion, calibration, roulis/tangage/roues/braquage/feux, contrôles capot/coffre | Ça bouge pour de vrai en voiture |
 | **3. Navigation + GPS** | MapKit complet, app compagnon iPhone, guidage vocal, média | Utilisable au quotidien |
 | **4. ESP32 + OBD standard** | Montage ESP32 + transceiver, firmware poller PID, GATT, `ESP32Source`, jauges, conso, codes défaut | Données moteur réelles |
 | **5. CAN Ford** | Dump/sniffing sur la Fiesta, identification des trames, décodage clignotants/feux/portes/marche AR | Voiture 3D synchronisée à 100 % |
 | **6. Finitions** | Perfs (thermique iPad au soleil !), dashcam, toybox, tests route | v1.0 |
+
+### Fait en phase 0 (16/10/2026)
+- Repo public [AL1X0/3dUiCar](https://github.com/AL1X0/3dUiCar), source SideStore `sidestore/source.json`, bundle ID fixe `com.al1x0.car3dui`.
+- `Car.usdz` : ~101 k triangles, textures 1K, pivots `Wheel_*_Steer/Spin`, `Door_FL/FR`, `Hood`, `Trunk`, `Body` (script `Tools/model/build_car.py`).
+- Scène 3D via `ARView` non-AR (API la plus éprouvée) plutôt que `RealityView`.
+- Typo système (SF Pro) en attendant Inter ; icônes SF Symbols en attendant l'export Figma (phase 1).
 
 ## 11. Risques
 
