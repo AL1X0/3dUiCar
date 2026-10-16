@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.5.0",
+          "buildVersion": "17",
+          "date": "2026-10-16T20:32:27Z",
+          "localizedDescription": "Tout se ferme en glissant ; séparateur voiture/carte redimensionnable ; boutons inutiles supprimés ; Spotify complet (bibliothèque, recherche, favoris, aléatoire, répétition, barre de lecture) ; volume système et météo réels.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.5.0/Car3DUI.ipa",
+          "size": 9567216,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.4.0",
           "buildVersion": "14",
           "date": "2026-10-16T20:03:43Z",
@@ -77,6 +86,15 @@
       "category": "utilities",
       "screenshots": [],
       "versions": [
+        {
+          "version": "0.5.0",
+          "buildVersion": "17",
+          "date": "2026-10-16T20:32:27Z",
+          "localizedDescription": "Tout se ferme en glissant ; séparateur voiture/carte redimensionnable ; boutons inutiles supprimés ; Spotify complet (bibliothèque, recherche, favoris, aléatoire, répétition, barre de lecture) ; volume système et météo réels.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.5.0/Car3DUICompanion.ipa",
+          "size": 1257246,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "0.4.0",
           "buildVersion": "14",
