@@ -190,9 +190,9 @@ Source : *Tesla Dashboard UI Component Library (Community)* — librairie basée
 | **0. Setup** ✅ | Repo + XcodeGen + workflow GitHub Actions (`.ipa` non signé), modèle 3D simplifié en USDZ, tokens + police Inter + icônes exportés du Figma | `.ipa` qui affiche la voiture sur l'iPad Pro |
 | **1. Coquille UI** ✅ | Panneau gauche (PRND, vitesse, témoins), barre de statut, dock, panneau Réglages (arbre + Controls/Lights/Display…), lecteur média compact, clair/sombre, `SimulatorSource` | UI complète en données simulées |
 | **2. Voiture vivante + capteurs** ✅ (à valider sur route) | CoreMotion, calibration, roulis/tangage/roues/braquage/feux, contrôles capot/coffre | Ça bouge pour de vrai en voiture |
-| **3. Navigation + GPS** | MapKit complet, app compagnon iPhone, guidage vocal, média | Utilisable au quotidien |
-| **4. ESP32 + OBD standard** | Montage ESP32 + transceiver, firmware poller PID, GATT, `ESP32Source`, jauges, conso, codes défaut | Données moteur réelles |
-| **5. CAN Ford** | Dump/sniffing sur la Fiesta, identification des trames, décodage clignotants/feux/portes/marche AR | Voiture 3D synchronisée à 100 % |
+| **3. Navigation + GPS** ✅ | MapKit complet, app compagnon iPhone, guidage vocal, média | Utilisable au quotidien |
+| **4. ESP32 + OBD standard** ✅ | Montage ESP32 + transceiver, firmware poller PID, GATT, `ESP32Source`, jauges, conso, codes défaut | Données moteur réelles |
+| **5. CAN Ford** 🟡 (outil d'enregistrement prêt, décodage à faire sur la voiture) | Dump/sniffing sur la Fiesta, identification des trames, décodage clignotants/feux/portes/marche AR | Voiture 3D synchronisée à 100 % |
 | **6. Finitions** | Perfs (thermique iPad au soleil !), dashcam, toybox, tests route | v1.0 |
 
 ### Fait en phase 0 (16/10/2026)
@@ -211,6 +211,13 @@ Source : *Tesla Dashboard UI Component Library (Community)* — librairie basée
 - Modèle refait : géométrie Y-up, hiérarchie finale `Car/Sprung/{Body,Door_*,Hood,Trunk}` + `Wheel_*_Steer/Spin`, nœuds sans rotation (contrôlé par `Tools/model/package_usdz.py`), carrosserie pleine résolution (~202 k triangles), peinture blanche.
 - `SensorHub` : CoreMotion 50 Hz, calibration du niveau + apprentissage automatique de l'axe avant, G long./lat., lacet, pente ; vitesse GPS si fix GNSS ; P/D déduits.
 - Musique : Spotify via SDK App Remote (Client ID à saisir dans Réglages › Logiciel).
+
+### Fait en phases 3 à 5 (16/10/2026, v0.4.0)
+- `docs/protocols.md` : contrats iPhone→iPad et ESP32→iPad.
+- Navigation : recherche, itinéraires alternatifs, guidage étape par étape, voix FR, recalcul, caméra qui suit la voiture.
+- App iPhone « 3dUiCar GPS » (Bonjour UDP, arrière-plan) ; l'iPad privilégie son GPS.
+- Firmware ESP32 (TWAI + NimBLE, PID OBD, codes défaut, enregistrement brut, veille) compilé en CI ; `ESP32Source` côté iPad (rapport engagé déduit, CSV CAN partageable).
+- Reste phase 5 : enregistrer le bus sur la Fiesta, identifier les trames (clignotants, portes, feux…) et remplir la table `FordSignal`.
 
 ## 11. Risques
 

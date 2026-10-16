@@ -43,7 +43,8 @@ final class SpotifyController: NSObject {
 
     override init() {
         let bundled = Bundle.main.object(forInfoDictionaryKey: "SpotifyClientID") as? String ?? ""
-        clientID = UserDefaults.standard.string(forKey: Self.clientIDKey) ?? bundled
+        let stored = UserDefaults.standard.string(forKey: Self.clientIDKey) ?? ""
+        clientID = stored.isEmpty ? bundled : stored
         super.init()
         positionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
