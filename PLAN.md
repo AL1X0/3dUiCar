@@ -189,7 +189,7 @@ Source : *Tesla Dashboard UI Component Library (Community)* — librairie basée
 |---|---|---|
 | **0. Setup** ✅ | Repo + XcodeGen + workflow GitHub Actions (`.ipa` non signé), modèle 3D simplifié en USDZ, tokens + police Inter + icônes exportés du Figma | `.ipa` qui affiche la voiture sur l'iPad Pro |
 | **1. Coquille UI** ✅ | Panneau gauche (PRND, vitesse, témoins), barre de statut, dock, panneau Réglages (arbre + Controls/Lights/Display…), lecteur média compact, clair/sombre, `SimulatorSource` | UI complète en données simulées |
-| **2. Voiture vivante + capteurs** | CoreMotion, calibration, roulis/tangage/roues/braquage/feux, contrôles capot/coffre | Ça bouge pour de vrai en voiture |
+| **2. Voiture vivante + capteurs** ✅ (à valider sur route) | CoreMotion, calibration, roulis/tangage/roues/braquage/feux, contrôles capot/coffre | Ça bouge pour de vrai en voiture |
 | **3. Navigation + GPS** | MapKit complet, app compagnon iPhone, guidage vocal, média | Utilisable au quotidien |
 | **4. ESP32 + OBD standard** | Montage ESP32 + transceiver, firmware poller PID, GATT, `ESP32Source`, jauges, conso, codes défaut | Données moteur réelles |
 | **5. CAN Ford** | Dump/sniffing sur la Fiesta, identification des trames, décodage clignotants/feux/portes/marche AR | Voiture 3D synchronisée à 100 % |
@@ -206,6 +206,11 @@ Source : *Tesla Dashboard UI Component Library (Community)* — librairie basée
 - Panneau Réglages 14 sections (icône voiture du dock), composants Figma, réglages persistés (UserDefaults).
 - Lecteur Apple Music (MPMusicPlayerController), police Inter embarquée, 40 icônes extraites du Figma.
 - CI : échoue désormais réellement si `xcodebuild` échoue.
+
+### Fait en phase 2 (16/10/2026, v0.3.0)
+- Modèle refait : géométrie Y-up, hiérarchie finale `Car/Sprung/{Body,Door_*,Hood,Trunk}` + `Wheel_*_Steer/Spin`, nœuds sans rotation (contrôlé par `Tools/model/package_usdz.py`), carrosserie pleine résolution (~202 k triangles), peinture blanche.
+- `SensorHub` : CoreMotion 50 Hz, calibration du niveau + apprentissage automatique de l'axe avant, G long./lat., lacet, pente ; vitesse GPS si fix GNSS ; P/D déduits.
+- Musique : Spotify via SDK App Remote (Client ID à saisir dans Réglages › Logiciel).
 
 ## 11. Risques
 
