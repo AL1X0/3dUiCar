@@ -19,6 +19,18 @@ p.add_argument("--url", required=True)
 p.add_argument("--notes", default="")
 a = p.parse_args()
 
+def legacy(app):
+    """Champs de l'ancien format AltStore (lus par les versions de SideStore < 2.0)."""
+    latest = app["versions"][0]
+    app["version"] = latest["version"]
+    app["versionDate"] = latest["date"]
+    app["versionDescription"] = latest["localizedDescription"]
+    app["downloadURL"] = latest["downloadURL"]
+    app["size"] = latest["size"]
+    app.setdefault("screenshotURLs", [])
+    app.setdefault("permissions", [])
+
+
 src = json.loads(SOURCE.read_text(encoding="utf-8"))
 app = next(x for x in src["apps"] if x["bundleIdentifier"] == a.bundle)
 
@@ -33,6 +45,7 @@ entry = {
 }
 app["versions"] = [v for v in app.get("versions", []) if v["version"] != a.version]
 app["versions"].insert(0, entry)
+legacy(app)
 
 SOURCE.write_text(json.dumps(src, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 print(f"source.json : {a.bundle} -> {a.version} ({a.build})")
