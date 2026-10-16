@@ -1,0 +1,9 @@
+# Xcode (projet généré par XcodeGen)
+*.xcodeproj/
+build/
+DerivedData/
+Payload/
+*.ipa
+.DS_Store
+__pycache__/
+*.blend1

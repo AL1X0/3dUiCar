@@ -1,0 +1,34 @@
+{
+  "name": "3dUiCar",
+  "identifier": "com.al1x0.car3dui.source",
+  "subtitle": "Interface façon Tesla pour iPad, avec voiture 3D animée.",
+  "description": "Source SideStore de 3dUiCar. Les mises à jour arrivent automatiquement à chaque nouvelle version taguée sur GitHub.",
+  "iconURL": "https://raw.githubusercontent.com/AL1X0/3dUiCar/main/docs/icon.png",
+  "website": "https://github.com/AL1X0/3dUiCar",
+  "tintColor": "#005AFF",
+  "sourceURL": "https://raw.githubusercontent.com/AL1X0/3dUiCar/main/sidestore/source.json",
+  "apps": [
+    {
+      "name": "3dUiCar",
+      "bundleIdentifier": "com.al1x0.car3dui",
+      "developerName": "AL1X0",
+      "subtitle": "Tableau de bord façon Tesla pour iPad",
+      "localizedDescription": "Reproduction de l'interface Tesla sur iPad : voiture 3D qui suit les mouvements réels (gyroscope, GPS), navigation, dock, réglages. Remontée OBD via module ESP32 à venir.",
+      "iconURL": "https://raw.githubusercontent.com/AL1X0/3dUiCar/main/docs/icon.png",
+      "tintColor": "#005AFF",
+      "category": "utilities",
+      "screenshots": [],
+      "versions": [],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSLocationWhenInUseUsageDescription": "La position sert à la navigation et à l'animation de la voiture.",
+          "NSMotionUsageDescription": "Les capteurs de mouvement animent la caisse de la voiture 3D.",
+          "NSBluetoothAlwaysUsageDescription": "Le Bluetooth relie l'app au module OBD ESP32.",
+          "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon."
+        }
+      }
+    }
+  ],
+  "news": []
+}

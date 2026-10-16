@@ -1,0 +1,44 @@
+# Projet Xcode généré par XcodeGen (en CI : `xcodegen generate`).
+# Ne pas éditer le .xcodeproj : il n'est pas versionné.
+name: Car3DUI
+options:
+  bundleIdPrefix: com.al1x0
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+
+targets:
+  Car3DUI:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Sources
+      - path: App/Resources
+    settings:
+      base:
+        # Identifiant FIXE : ne jamais le changer, sinon SideStore installe une nouvelle app
+        # au lieu de mettre à jour l'existante.
+        PRODUCT_BUNDLE_IDENTIFIER: com.al1x0.car3dui
+        PRODUCT_NAME: Car3DUI
+        TARGETED_DEVICE_FAMILY: "2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "3dUiCar"
+        INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_UIStatusBarHidden: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "La position sert à la navigation et à l'animation de la voiture."
+        INFOPLIST_KEY_NSMotionUsageDescription: "Les capteurs de mouvement animent la caisse de la voiture 3D."
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "Le Bluetooth relie l'app au module OBD ESP32."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Le réseau local reçoit le GPS de l'iPhone compagnon."
