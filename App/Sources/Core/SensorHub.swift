@@ -27,7 +27,10 @@ final class SensorHub: NSObject {
     @ObservationIgnored private var left = SIMD3<Double>(-1, 0, 0)
 
     // Filtres
-    @ObservationIgnored private var longG = 0.0, latG = 0.0, yaw = 0.0, pitch = 0.0
+    @ObservationIgnored private var longG = 0.0
+    @ObservationIgnored private var latG = 0.0
+    @ObservationIgnored private var yaw = 0.0
+    @ObservationIgnored private var pitch = 0.0
     @ObservationIgnored private var forwardSamples = SIMD3<Double>(0, 0, 0)
     @ObservationIgnored private var forwardSampleCount = 0
     @ObservationIgnored private var stoppedSince: Date?
