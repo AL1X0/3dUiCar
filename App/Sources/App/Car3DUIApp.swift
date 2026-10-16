@@ -4,6 +4,10 @@ import SwiftUI
 struct Car3DUIApp: App {
     @State private var vehicle: VehicleState
     @State private var sensors: SensorHub
+    @State private var feed: LocationFeed
+    @State private var esp32: ESP32Source
+    @State private var nav = NavigationModel()
+    @State private var companion: CompanionReceiver
     @State private var settings = AppSettings()
     @State private var spotify = SpotifyController()
     @Environment(\.scenePhase) private var scenePhase
@@ -11,8 +15,12 @@ struct Car3DUIApp: App {
     init() {
         TeslaFont.registerFonts()
         let v = VehicleState()
+        let f = LocationFeed()
         _vehicle = State(initialValue: v)
-        _sensors = State(initialValue: SensorHub(vehicle: v))
+        _feed = State(initialValue: f)
+        _sensors = State(initialValue: SensorHub(vehicle: v, feed: f))
+        _esp32 = State(initialValue: ESP32Source(vehicle: v))
+        _companion = State(initialValue: CompanionReceiver(feed: f, vehicle: v))
     }
 
     var body: some Scene {
@@ -22,7 +30,16 @@ struct Car3DUIApp: App {
                 .environment(settings)
                 .environment(spotify)
                 .environment(sensors)
+                .environment(feed)
+                .environment(esp32)
+                .environment(nav)
                 .onOpenURL { spotify.handle(url: $0) }
+                .onAppear {
+                    nav.settings = settings
+                    sensors.startLocation()
+                    companion.start()
+                    esp32.start()
+                }
         }
         .onChange(of: scenePhase) {
             switch scenePhase {
@@ -40,6 +57,7 @@ struct RootView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(SpotifyController.self) private var spotify
     @Environment(SensorHub.self) private var sensors
+    @Environment(LocationFeed.self) private var feed
     @Environment(\.colorScheme) private var systemScheme
     @State private var simulator: SimulatorSource?
     private let tripTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -89,7 +107,10 @@ struct RootView: View {
         .onChange(of: settings.demoMode) { applyDemoMode() }
         .onChange(of: settings.brightness) { applyBrightness() }
         .onChange(of: settings.brightnessAuto) { applyBrightness() }
-        .onReceive(tripTimer) { _ in vehicle.integrateTrip(dt: 1) }
+        .onReceive(tripTimer) { _ in
+            vehicle.integrateTrip(dt: 1)
+            feed.checkTimeout()
+        }
     }
 
     /// Icône voiture du dock = ouvre/ferme les Réglages sur « Commandes » (comme Tesla).

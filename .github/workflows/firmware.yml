@@ -1,0 +1,25 @@
+name: Build ESP32 firmware
+
+on:
+  push:
+    branches: [main]
+    paths: ["Firmware/**", ".github/workflows/firmware.yml"]
+  workflow_dispatch:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PlatformIO
+        run: pip install platformio
+      - name: Build
+        working-directory: Firmware
+        run: pio run -e esp32dev
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-esp32dev
+          path: Firmware/.pio/build/esp32dev/firmware.bin

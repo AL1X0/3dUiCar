@@ -1,12 +1,12 @@
-name: Build iPad app
+name: Build iPad + iPhone apps
 
-# - push sur main / PR : compile et publie l'.ipa non signé en artefact
+# - push sur main / PR : compile les deux apps et publie les .ipa non signés en artefacts
 # - tag vX.Y.Z : idem + GitHub Release + mise à jour de la source SideStore
 on:
   push:
     branches: [main]
     tags: ["v*"]
-    paths-ignore: ["sidestore/**", "**.md", "docs/**"]
+    paths-ignore: ["sidestore/**", "**.md", "docs/**", "Firmware/**"]
   pull_request:
   workflow_dispatch:
 
@@ -42,54 +42,68 @@ jobs:
 
       - name: Build (unsigned)
         run: |
-          status=0
-          xcodebuild             -project Car3DUI.xcodeproj -scheme Car3DUI -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build -clonedSourcePackagesDirPath spm             SPOTIFY_CLIENT_ID="${{ vars.SPOTIFY_CLIENT_ID }}"             MARKETING_VERSION="${{ steps.ver.outputs.version }}"             CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}"             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""             build > build.log 2>&1 || status=$?
-          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log || true
-          if [ $status -ne 0 ] || ! grep -q "BUILD SUCCEEDED" build.log; then
-            tail -60 build.log
-            exit 1
-          fi
+          build_app() {
+            local scheme=$1 status=0
+            xcodebuild -project Car3DUI.xcodeproj -scheme "$scheme" -configuration Release \
+              -sdk iphoneos -destination 'generic/platform=iOS' \
+              -derivedDataPath build -clonedSourcePackagesDirPath spm \
+              SPOTIFY_CLIENT_ID="${{ vars.SPOTIFY_CLIENT_ID }}" \
+              MARKETING_VERSION="${{ steps.ver.outputs.version }}" \
+              CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+              build > "build-$scheme.log" 2>&1 || status=$?
+            grep -E "error:|BUILD (SUCCEEDED|FAILED)" "build-$scheme.log" || true
+            if [ $status -ne 0 ] || ! grep -q "BUILD SUCCEEDED" "build-$scheme.log"; then
+              tail -60 "build-$scheme.log"
+              return 1
+            fi
+          }
+          build_app Car3DUI
+          build_app Car3DUICompanion
 
       - name: Package .ipa
         run: |
-          mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/Car3DUI.app Payload/
-          zip -qry Car3DUI.ipa Payload
-          ls -lh Car3DUI.ipa
+          for app in Car3DUI Car3DUICompanion; do
+            rm -rf Payload && mkdir Payload
+            cp -R "build/Build/Products/Release-iphoneos/$app.app" Payload/
+            zip -qry "$app.ipa" Payload
+          done
+          ls -lh *.ipa
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Car3DUI-${{ steps.ver.outputs.version }}-${{ steps.ver.outputs.build }}
-          path: Car3DUI.ipa
+          name: apps-${{ steps.ver.outputs.version }}-${{ steps.ver.outputs.build }}
+          path: "*.ipa"
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: build-log
-          path: build.log
+          name: build-logs
+          path: "build-*.log"
 
       - name: GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" Car3DUI.ipa \
+          gh release create "$GITHUB_REF_NAME" Car3DUI.ipa Car3DUICompanion.ipa \
             --title "3dUiCar $GITHUB_REF_NAME" --generate-notes
 
       - name: Update SideStore source
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          SIZE=$(stat -f%z Car3DUI.ipa)
           # checkout@v4 ne récupère pas l'annotation du tag : on la refetch pour les notes
           git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          NOTES="$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME" | head -20)"
+          BASE="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
           git fetch origin main
           git checkout main
-          python3 Tools/sidestore/update_source.py \
-            --version "${{ steps.ver.outputs.version }}" \
-            --build "${{ steps.ver.outputs.build }}" \
-            --size "$SIZE" \
-            --url "https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/Car3DUI.ipa" \
-            --notes "$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME" | head -20)"
+          for pair in "com.al1x0.car3dui:Car3DUI" "com.al1x0.car3dui.companion:Car3DUICompanion"; do
+            bundle="${pair%%:*}"; app="${pair##*:}"
+            python3 Tools/sidestore/update_source.py --bundle "$bundle" \
+              --version "${{ steps.ver.outputs.version }}" --build "${{ steps.ver.outputs.build }}" \
+              --size "$(stat -f%z "$app.ipa")" --url "$BASE/$app.ipa" --notes "$NOTES"
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sidestore/source.json

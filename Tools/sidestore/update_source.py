@@ -9,9 +9,9 @@ import json
 import pathlib
 
 SOURCE = pathlib.Path(__file__).resolve().parents[2] / "sidestore" / "source.json"
-BUNDLE_ID = "com.al1x0.car3dui"
 
 p = argparse.ArgumentParser()
+p.add_argument("--bundle", default="com.al1x0.car3dui")
 p.add_argument("--version", required=True)
 p.add_argument("--build", required=True)
 p.add_argument("--size", type=int, required=True)
@@ -20,7 +20,7 @@ p.add_argument("--notes", default="")
 a = p.parse_args()
 
 src = json.loads(SOURCE.read_text(encoding="utf-8"))
-app = next(x for x in src["apps"] if x["bundleIdentifier"] == BUNDLE_ID)
+app = next(x for x in src["apps"] if x["bundleIdentifier"] == a.bundle)
 
 entry = {
     "version": a.version,
@@ -29,10 +29,10 @@ entry = {
     "localizedDescription": a.notes.strip() or f"Version {a.version}",
     "downloadURL": a.url,
     "size": a.size,
-    "minOSVersion": "18.0",
+    "minOSVersion": "18.0" if a.bundle == "com.al1x0.car3dui" else "17.0",
 }
 app["versions"] = [v for v in app.get("versions", []) if v["version"] != a.version]
 app["versions"].insert(0, entry)
 
 SOURCE.write_text(json.dumps(src, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-print(f"source.json -> {a.version} ({a.build})")
+print(f"source.json : {a.bundle} -> {a.version} ({a.build})")

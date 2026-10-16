@@ -53,8 +53,27 @@
           "NSLocationWhenInUseUsageDescription": "La position sert à la navigation et à l'animation de la voiture.",
           "NSMotionUsageDescription": "Les capteurs de mouvement animent la caisse de la voiture 3D.",
           "NSBluetoothAlwaysUsageDescription": "Le Bluetooth relie l'app au module OBD ESP32.",
-          "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon.",
-          "NSAppleMusicUsageDescription": "L'accès à la musique alimente le lecteur du tableau de bord."
+          "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon."
+        }
+      }
+    },
+    {
+      "name": "3dUiCar GPS",
+      "bundleIdentifier": "com.al1x0.car3dui.companion",
+      "developerName": "AL1X0",
+      "subtitle": "Envoie le GPS de l'iPhone à 3dUiCar",
+      "localizedDescription": "App iPhone compagnon : partage la position GPS du téléphone avec l'iPad (via le partage de connexion) pour la navigation et la vitesse quand l'iPad n'a pas de puce GPS.",
+      "iconURL": "https://raw.githubusercontent.com/AL1X0/3dUiCar/main/docs/icon.png",
+      "tintColor": "#005AFF",
+      "category": "utilities",
+      "screenshots": [],
+      "versions": [],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSLocationWhenInUseUsageDescription": "Le GPS du téléphone est envoyé à l'iPad pour la navigation.",
+          "NSLocationAlwaysAndWhenInUseUsageDescription": "L'envoi du GPS continue écran verrouillé pendant le trajet.",
+          "NSLocalNetworkUsageDescription": "Le réseau local sert à trouver l'iPad et lui envoyer la position."
         }
       }
     }

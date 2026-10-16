@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.3.0"
+    MARKETING_VERSION: "0.4.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
@@ -37,6 +37,7 @@ targets:
       properties:
         SpotifyClientID: $(SPOTIFY_CLIENT_ID)
         LSApplicationQueriesSchemes: [spotify]
+        NSBonjourServices: [_car3dui._udp]
         CFBundleURLTypes:
           - CFBundleURLName: com.al1x0.car3dui
             CFBundleURLSchemes: [car3dui]
@@ -59,5 +60,34 @@ targets:
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "La position sert à la navigation et à l'animation de la voiture."
         INFOPLIST_KEY_NSMotionUsageDescription: "Les capteurs de mouvement animent la caisse de la voiture 3D."
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "Le Bluetooth relie l'app au module OBD ESP32."
-        INFOPLIST_KEY_NSAppleMusicUsageDescription: "L'accès à la musique alimente le lecteur du tableau de bord."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Le réseau local reçoit le GPS de l'iPhone compagnon."
+
+  # App iPhone compagnon : envoie le GPS du téléphone à l'iPad (docs/protocols.md §1)
+  Car3DUICompanion:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Companion/Sources
+      - path: Companion/Resources
+    scheme: {}
+    info:
+      path: Companion/Info.plist
+      properties:
+        NSBonjourServices: [_car3dui._udp]
+        UIBackgroundModes: [location]
+    settings:
+      base:
+        # Identifiant FIXE (mises à jour SideStore)
+        PRODUCT_BUNDLE_IDENTIFIER: com.al1x0.car3dui.companion
+        PRODUCT_NAME: Car3DUICompanion
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "3dUiCar GPS"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Le GPS du téléphone est envoyé à l'iPad pour la navigation."
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "L'envoi du GPS continue écran verrouillé pendant le trajet."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Le réseau local sert à trouver l'iPad et lui envoyer la position."

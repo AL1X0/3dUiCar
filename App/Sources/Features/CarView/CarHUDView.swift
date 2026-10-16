@@ -3,6 +3,7 @@ import SwiftUI
 struct CarHUDView: View {
     @Environment(VehicleState.self) private var vehicle
     @Environment(\.palette) private var palette
+    @Environment(ESP32Source.self) private var esp32
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -11,6 +12,13 @@ struct CarHUDView: View {
                 gearSelectorText
                     .font(TeslaFont.ui(14, .semibold))
                     .tracking(6)
+                if let g = esp32.manualGear, vehicle.gear == .drive {
+                    Text("\(g)")
+                        .font(TeslaFont.ui(14, .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 22, height: 22)
+                        .background(Circle().fill(Theme.accent))
+                }
 
                 Spacer()
 

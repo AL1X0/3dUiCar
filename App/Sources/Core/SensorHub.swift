@@ -18,6 +18,7 @@ final class SensorHub: NSObject {
     private(set) var hasGPS = false
 
     @ObservationIgnored private let vehicle: VehicleState
+    @ObservationIgnored private let feed: LocationFeed
     @ObservationIgnored private let motion = CMMotionManager()
     @ObservationIgnored private let location = CLLocationManager()
 
@@ -38,8 +39,9 @@ final class SensorHub: NSObject {
 
     private static let defaultsKey = "SensorHub.calibration.v1"
 
-    init(vehicle: VehicleState) {
+    init(vehicle: VehicleState, feed: LocationFeed) {
         self.vehicle = vehicle
+        self.feed = feed
         super.init()
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBestForNavigation
@@ -52,8 +54,6 @@ final class SensorHub: NSObject {
     func start() {
         guard !running else { return }
         running = true
-        location.requestWhenInUseAuthorization()
-        location.startUpdatingLocation()
 
         guard motion.isDeviceMotionAvailable else { return }
         motion.deviceMotionUpdateInterval = 1.0 / 50
@@ -67,7 +67,12 @@ final class SensorHub: NSObject {
         guard running else { return }
         running = false
         motion.stopDeviceMotionUpdates()
-        location.stopUpdatingLocation()
+    }
+
+    /// La position (carte, navigation) tourne en permanence, mode démo compris.
+    func startLocation() {
+        location.requestWhenInUseAuthorization()
+        location.startUpdatingLocation()
     }
 
     // MARK: - Calibration
@@ -185,7 +190,9 @@ extension SensorHub: CLLocationManagerDelegate {
         guard let loc = locations.last else { return }
         let speed = loc.speed, accuracy = loc.horizontalAccuracy, speedAccuracy = loc.speedAccuracy
         Task { @MainActor in
-            guard self.running else { return }
+            self.feed.updateFromDevice(loc)
+            // L'iPhone compagnon (vrai GPS) a la priorité sur l'iPad
+            guard self.running, self.feed.source == .device else { return }
             self.vehicle.locationSource = .device
             // Vitesse valide uniquement avec un vrai fix GNSS (iPad Cellular / GPS externe)
             if speed >= 0, speedAccuracy >= 0, accuracy < 50 {

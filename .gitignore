@@ -9,3 +9,5 @@ __pycache__/
 *.blend1
 App/Info.plist
 spm/
+Companion/Info.plist
+Firmware/.pio/
