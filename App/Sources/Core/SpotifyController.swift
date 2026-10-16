@@ -189,7 +189,7 @@ final class SpotifyController: NSObject {
 
     func play(_ item: SpotifyItem) {
         guard isConnected, let api = appRemote?.playerAPI else { authorize(playURI: item.id); return }
-        if let content = contentItems[item.id] { api.playItem(content, callback: nil) }
+        if let content = contentItems[item.id] { api.play(content, callback: nil) }
         else { api.play(item.id, callback: nil) }
     }
 

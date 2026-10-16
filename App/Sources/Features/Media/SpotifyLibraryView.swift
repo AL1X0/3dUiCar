@@ -138,7 +138,7 @@ struct SpotifyLibraryView: View {
                     .padding(.horizontal, 32)
             }
 
-            AccentButton("Connecter", systemImage: "music.note", width: 220) {
+            AccentButton(title: "Connecter", systemImage: "music.note", width: 220) {
                 spotify.authorize()
             }
             .padding(.top, 8)
@@ -231,7 +231,7 @@ struct SpotifyLibraryView: View {
                         .font(TeslaFont.ui(16, .semibold))
                         .foregroundStyle(palette.textSecondary)
 
-                    AccentButton("Recharger", isOn: true, width: 200) {
+                    AccentButton(title: "Recharger", isOn: true, width: 200) {
                         spotify.loadLibrary()
                     }
                 }
