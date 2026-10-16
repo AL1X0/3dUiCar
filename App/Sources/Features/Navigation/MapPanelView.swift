@@ -12,6 +12,7 @@ struct MapPanelView: View {
     @State private var position: MapCameraPosition = .camera(
         MapCamera(centerCoordinate: .init(latitude: 48.8566, longitude: 2.3522), distance: 1500, heading: 0, pitch: 45))
     @State private var following = true
+    @State private var etaCollapsed = false
 
     var body: some View {
         Map(position: $position, interactionModes: .all) {
@@ -38,6 +39,9 @@ struct MapPanelView: View {
         .onMapCameraChange(frequency: .onEnd) { _ in
             if position.positionedByUser { following = false }
         }
+        .onChange(of: nav.phase) { _, phase in
+            if phase != .navigating { etaCollapsed = false }
+        }
         .onChange(of: feed.location) { _, loc in
             guard let loc else { return }
             nav.update(location: loc)
@@ -51,6 +55,7 @@ struct MapPanelView: View {
                         TurnBanner()
                     } else {
                         NavSearchBar()
+                            .swipeToDismiss(.up) { nav.cancel() }
                     }
                     Spacer()
                 }
@@ -61,8 +66,16 @@ struct MapPanelView: View {
         .overlay(alignment: .bottomLeading) {
             Group {
                 switch nav.phase {
-                case .preview: RoutePreviewCard()
-                case .navigating: TripETACard()
+                case .preview:
+                    RoutePreviewCard()
+                        .swipeToDismiss(.down) { nav.cancel() }
+                case .navigating:
+                    if etaCollapsed {
+                        etaPill
+                    } else {
+                        TripETACard()
+                            .swipeToDismiss(.down) { etaCollapsed = true }
+                    }
                 default: EmptyView()
                 }
             }
@@ -84,6 +97,25 @@ struct MapPanelView: View {
                 .padding(20)
             }
         }
+    }
+
+    /// Carte d'arrivée réduite : touche ou glisse vers le haut pour la rouvrir.
+    private var etaPill: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "flag.checkered")
+            Text(nav.arrivalDate.formatted(.dateTime.hour().minute()))
+                .font(TeslaFont.ui(17, .semibold))
+            Text("· \(Int(nav.remainingTime / 60)) min")
+                .font(TeslaFont.ui(15))
+                .foregroundStyle(palette.textSecondary)
+        }
+        .foregroundStyle(palette.textPrimary)
+        .padding(.horizontal, 18)
+        .frame(height: 48)
+        .background(palette.panel, in: Capsule())
+        .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
+        .onTapGesture { withAnimation(.spring(duration: 0.3)) { etaCollapsed = false } }
+        .swipeToDismiss(.up, threshold: 30) { etaCollapsed = false }
     }
 
     /// Caméra derrière la voiture, cap en haut, zoom selon la vitesse (comme Tesla).

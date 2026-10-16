@@ -48,15 +48,6 @@ struct CarPanelView: View {
         return HStack {
             shortcut(title: "Capot", open: $v.hoodOpen)
             Spacer()
-            Button {
-                v.locked.toggle()
-            } label: {
-                Image(systemName: v.locked ? "lock.fill" : "lock.open.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(palette.textPrimary)
-                    .frame(width: Theme.minTouch, height: Theme.minTouch)
-            }
-            Spacer()
             shortcut(title: "Coffre", open: $v.trunkOpen)
         }
         .buttonStyle(.plain)

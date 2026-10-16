@@ -22,24 +22,22 @@ struct CarHUDView: View {
 
                 Spacer()
 
-                HStack(spacing: 6) {
-                    Text("\(Int(vehicle.fuelLevel * 100))%")
-                        .font(TeslaFont.ui(13, .medium))
-                        .foregroundColor(palette.textSecondary)
-
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .strokeBorder(palette.textSecondary, lineWidth: 1)
-                        Capsule()
-                            .fill(palette.textPrimary)
-                            .frame(width: max(0, min(34, 34 * CGFloat(vehicle.fuelLevel))))
+                if let fuel = vehicle.fuelLevel {
+                    HStack(spacing: 6) {
+                        Text("\(Int(fuel * 100))%")
+                            .font(TeslaFont.ui(13, .medium))
+                            .foregroundColor(palette.textSecondary)
+                        ZStack(alignment: .leading) {
+                            Capsule().strokeBorder(palette.textSecondary, lineWidth: 1)
+                            Capsule().fill(fuel < 0.15 ? Theme.warningRed : palette.textPrimary)
+                                .frame(width: max(0, min(34, 34 * CGFloat(fuel))))
+                        }
+                        .frame(width: 34, height: 12)
+                        .clipShape(Capsule())
+                        Image(systemName: "fuelpump.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(palette.textSecondary)
                     }
-                    .frame(width: 34, height: 12)
-                    .clipShape(Capsule())
-
-                    Image(systemName: "fuelpump.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(palette.textSecondary)
                 }
             }
 

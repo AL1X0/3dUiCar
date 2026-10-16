@@ -1,62 +1,23 @@
 import SwiftUI
 
-/// Vue représentant la page « Commandes » de l'interface Tesla.
 struct ControlsPage: View {
     @Environment(AppSettings.self) private var settings
     @Environment(VehicleState.self) private var vehicle
-    @Environment(\.palette) private var palette
 
     var body: some View {
         @Bindable var s = settings
         @Bindable var v = vehicle
 
+        let anyOpen = v.hoodOpen || v.trunkOpen || v.doorFLOpen || v.doorFROpen
+
         SettingsPage {
-            // Section Phares
-            SettingsTitle(title: "Phares")
-            HStack(spacing: 12) {
-                TeslaSegmented(
-                    options: [
-                        (.off, "Off"),
-                        (.parking, "Feux de position"),
-                        (.on, "On"),
-                        (.auto, "Auto")
-                    ],
-                    selection: $s.headlightMode,
-                    icon: "sun.max"
-                )
+            SettingsTitle(title: "Voiture 3D")
 
-                AccentButton(
-                    title: "",
-                    systemImage: "headlight.high.beam.fill",
-                    isOn: vehicle.highBeam,
-                    width: 82
-                ) {
-                    v.highBeam.toggle()
-                }
-            }
-
-            // Rangée d'accès rapide (Rétros, Sécurité enfants, Capot, Coffre)
             TileRow {
                 TileButton(
-                    title: "Rabattre rétros",
-                    systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right",
-                    isActive: settings.mirrorsFolded
-                ) {
-                    s.mirrorsFolded.toggle()
-                }
-
-                TileButton(
-                    title: "Sécurité enfants",
-                    systemImage: "figure.and.child.holdinghands",
-                    isActive: settings.childLock
-                ) {
-                    s.childLock.toggle()
-                }
-
-                TileButton(
                     title: "Capot",
-                    asset: "app.car",
-                    isActive: vehicle.hoodOpen
+                    systemImage: "chevron.up.square",
+                    isActive: v.hoodOpen
                 ) {
                     v.hoodOpen.toggle()
                 }
@@ -64,117 +25,77 @@ struct ControlsPage: View {
                 TileButton(
                     title: "Coffre",
                     systemImage: "car.rear.waves.up",
-                    isActive: vehicle.trunkOpen
+                    isActive: v.trunkOpen
                 ) {
                     v.trunkOpen.toggle()
                 }
+
+                TileButton(
+                    title: "Porte G",
+                    systemImage: "door.left.hand.open",
+                    isActive: v.doorFLOpen
+                ) {
+                    v.doorFLOpen.toggle()
+                }
+
+                TileButton(
+                    title: "Porte D",
+                    systemImage: "door.right.hand.open",
+                    isActive: v.doorFROpen
+                ) {
+                    v.doorFROpen.toggle()
+                }
             }
 
-            // Section Essuie-glaces
-            SettingsTitle(title: "Essuie-glaces")
+            AccentButton(
+                title: "Tout fermer",
+                systemImage: "xmark.circle",
+                isOn: anyOpen
+            ) {
+                v.hoodOpen = false
+                v.trunkOpen = false
+                v.doorFLOpen = false
+                v.doorFROpen = false
+            }
+
+            SettingsDivider()
+
+            SettingsTitle(title: "Apparence")
+
             TeslaSegmented(
                 options: [
-                    (0, "Off"),
-                    (1, "I"),
-                    (2, "II"),
-                    (3, "III"),
-                    (4, "IIII"),
-                    (5, "Auto")
+                    (value: Appearance.auto, label: "Auto"),
+                    (value: Appearance.light, label: "Clair"),
+                    (value: Appearance.dark, label: "Sombre")
                 ],
-                selection: $s.wiperSpeed,
-                icon: "windshield.front.and.wiper"
+                selection: $s.appearance
             )
 
-            // Colonnes de réglages secondaires
-            HStack(alignment: .top, spacing: 16) {
-                VStack(spacing: 1) {
-                    ControlRow(
-                        title: "Rétroviseurs",
-                        systemImage: "car.side.and.exclamationmark"
-                    ) {}
-                    ControlRow(
-                        title: "Volant",
-                        systemImage: "steeringwheel"
-                    ) {}
-                }
-                .background(palette.outline)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(palette.outline, lineWidth: 1))
-                .frame(maxWidth: .infinity)
+            SettingsTitle(title: "Luminosité de l'écran")
 
-                VStack(spacing: 1) {
-                    ControlRow(
-                        title: "Dashcam",
-                        systemImage: "video.fill",
-                        showsRecordingDot: settings.dashcamRecording
-                    ) {
-                        s.dashcamRecording.toggle()
-                    }
-                    ControlRow(
-                        title: "Verrouiller",
-                        systemImage: vehicle.locked ? "lock.fill" : "lock.open.fill"
-                    ) {
-                        v.locked.toggle()
-                    }
-                }
-                .background(palette.outline)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(palette.outline, lineWidth: 1))
-                .frame(maxWidth: .infinity)
-            }
-
-            // Section Luminosité
-            SettingsTitle(title: "Luminosité")
             HStack(spacing: 12) {
                 BrightnessSlider(value: $s.brightness)
-                    .opacity(settings.brightnessAuto ? 0.5 : 1.0)
-                    .allowsHitTesting(!settings.brightnessAuto)
+                    .disabled(s.brightnessAuto)
+                    .opacity(s.brightnessAuto ? 0.5 : 1)
 
                 AccentButton(
                     title: "Auto",
-                    isOn: settings.brightnessAuto,
+                    isOn: s.brightnessAuto,
                     width: 120
                 ) {
                     s.brightnessAuto.toggle()
                 }
             }
+
+            SettingsDivider()
+
+            SettingsTitle(title: "Mode démo")
+
+            ToggleRow(
+                title: "Trajet simulé",
+                description: "Désactive pour utiliser les capteurs réels de l'iPad, le GPS de l'iPhone et le module OBD",
+                isOn: $s.demoMode
+            )
         }
-    }
-}
-
-/// Ligne d'action compacte pour les panneaux de commandes secondaires.
-private struct ControlRow: View {
-    let title: String
-    let systemImage: String
-    var showsRecordingDot: Bool = false
-    var action: () -> Void = {}
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 18))
-                    .frame(width: 24, height: 24)
-
-                Text(title)
-                    .font(TeslaFont.ui(15))
-
-                Spacer()
-
-                if showsRecordingDot {
-                    Circle()
-                        .fill(Theme.warningRed)
-                        .frame(width: 10, height: 10)
-                }
-            }
-            .foregroundStyle(palette.textPrimary)
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 54)
-            .background(palette.panelSecondary.opacity(0.35))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }

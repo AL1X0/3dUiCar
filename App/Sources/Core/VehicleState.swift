@@ -21,7 +21,7 @@ final class VehicleState {
     var gear: Gear = .park
     var speedLimitKmh: Int? = nil
     var rpm: Double? = nil            // nil tant qu'aucune source OBD
-    var fuelLevel: Double = 0.9       // 0...1
+    var fuelLevel: Double? = nil      // 0...1, nil tant qu'aucune source
 
     // Dynamique (repère voiture) — alimente l'animation de caisse
     var longitudinalG: Double = 0     // + = accélération
@@ -44,7 +44,7 @@ final class VehicleState {
     var doorFROpen = false
 
     // Températures
-    var outsideTempC: Double? = 18
+    var outsideTempC: Double? = nil
     var coolantTempC: Double? = nil
     var driverTempC: Double = 20
     var passengerTempC: Double = 20

@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SearchPage: View {
     @Environment(AppSettings.self) private var settings
-    @Environment(VehicleState.self) private var vehicle
     @Environment(\.palette) private var palette
 
     @State private var query = ""
@@ -20,12 +19,12 @@ struct SearchPage: View {
         SettingsPage {
             SettingsSearchField(text: $query)
 
-            SettingsCaption(text: "Fonctions mises en avant")
-
-            ToggleRow(title: "Feux de route automatiques", isOn: $s.autoHighBeam)
-            ToggleRow(title: "Mode démo", isOn: $s.demoMode)
-
-            SettingsDivider()
+            if query.isEmpty {
+                SettingsCaption(text: "Raccourcis")
+                ToggleRow(title: "Mode démo", isOn: $s.demoMode)
+                ToggleRow(title: "Afficher les voies", isOn: $s.showLanes)
+                SettingsDivider()
+            }
 
             VStack(spacing: 0) {
                 ForEach(filteredSections) { section in
@@ -38,7 +37,7 @@ struct SearchPage: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 20, height: 20)
-                                .foregroundStyle(palette.textPrimary)
+                                .foregroundStyle(palette.textSecondary)
 
                             Text(section.title)
                                 .font(TeslaFont.ui(16))
@@ -50,6 +49,7 @@ struct SearchPage: View {
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(palette.textSecondary)
                         }
+                        .padding(.horizontal, 8)
                         .frame(height: 48)
                         .contentShape(Rectangle())
                     }

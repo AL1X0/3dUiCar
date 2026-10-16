@@ -4,21 +4,44 @@ import SwiftUI
 struct SettingsPanel: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.palette) private var palette
+    @State private var drag: CGFloat = 0
+
+    /// Glisser la poignée ou l'en-tête vers le bas déplace tout le panneau et le ferme.
+    private var closeGesture: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { drag = max(0, $0.translation.height) }
+            .onEnded { g in
+                if drag > 90 || g.predictedEndTranslation.height > 260 {
+                    withAnimation(.spring(duration: 0.3)) { settings.settingsOpen = false }
+                }
+                withAnimation(.spring(duration: 0.3)) { drag = 0 }
+            }
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            navTree
-                .frame(width: 270)
-            VStack(spacing: 0) {
-                SettingsHeader()
-                page(for: settings.selectedSection)
-                    .id(settings.selectedSection)
-                    .transition(.opacity)
+        VStack(spacing: 0) {
+            // Zone de prise : glisser vers le bas ferme le panneau
+            GrabHandle()
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .gesture(closeGesture)
+            HStack(spacing: 0) {
+                navTree
+                    .frame(width: 250)
+                VStack(spacing: 0) {
+                    SettingsHeader()
+                        .contentShape(Rectangle())
+                        .gesture(closeGesture)
+                    page(for: settings.selectedSection)
+                        .id(settings.selectedSection)
+                        .transition(.opacity)
+                }
             }
         }
         .background(palette.panel)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 10, topTrailingRadius: 10))
         .shadow(color: .black.opacity(0.25), radius: 6, y: -2)
+        .offset(y: drag)
     }
 
     private var navTree: some View {
@@ -58,41 +81,51 @@ struct SettingsPanel: View {
         switch section {
         case .search: SearchPage()
         case .controls: ControlsPage()
-        case .pedals: PedalsPage()
-        case .fuel: FuelPage()
-        case .assist: AssistPage()
-        case .locks: LocksPage()
-        case .lights: LightsPage()
         case .display: DisplayPage()
-        case .trips: TripsPage()
         case .navigation: NavigationSettingsPage()
-        case .safety: SafetyPage()
+        case .music: MusicPage()
+        case .trips: TripsPage()
+        case .engine: EnginePage()
+        case .sensors: SensorsPage()
         case .service: ServicePage()
         case .software: SoftwarePage()
-        case .upgrades: UpgradesPage()
         }
     }
 }
 
-/// En-tête profil du Figma (« Easy Entry » + icônes d'état).
+/// En-tête : titre de la section + état réel des liaisons (GPS iPhone, OBD, Spotify) + fermeture.
 struct SettingsHeader: View {
+    @Environment(AppSettings.self) private var settings
     @Environment(VehicleState.self) private var vehicle
+    @Environment(LocationFeed.self) private var feed
+    @Environment(SpotifyController.self) private var spotify
     @Environment(\.palette) private var palette
 
     var body: some View {
-        HStack(spacing: 18) {
-            Image(systemName: "person.fill").font(.system(size: 18))
-            Text("Profil conducteur").font(TeslaFont.ui(20, .medium))
+        HStack(spacing: 16) {
+            Text(settings.selectedSection.title).font(TeslaFont.ui(22, .semibold)).foregroundStyle(palette.textPrimary)
             Spacer()
-            Image(systemName: "arrow.down.to.line").font(.system(size: 13))
-            Image(systemName: "bell.fill").font(.system(size: 13))
-            Image(systemName: "antenna.radiowaves.left.and.right")
-                .font(.system(size: 13))
-                .foregroundStyle(vehicle.obdConnected ? Theme.teal : palette.textSecondary)
-            Image(systemName: "cellularbars").font(.system(size: 13))
+            indicator("location.fill", on: feed.phoneConnected, color: Theme.accent)
+            indicator("antenna.radiowaves.left.and.right", on: vehicle.obdConnected, color: Theme.teal)
+            indicator("music.note", on: spotify.isConnected, color: Theme.telltaleGreen)
+            Button {
+                withAnimation(.spring(duration: 0.35)) { settings.settingsOpen = false }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(palette.textSecondary)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
         }
-        .foregroundStyle(palette.textSecondary)
-        .padding(.horizontal, 32)
-        .frame(height: 64)
+        .padding(.leading, 32)
+        .padding(.trailing, 16)
+        .frame(height: 60)
+    }
+
+    private func indicator(_ symbol: String, on: Bool, color: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 14))
+            .foregroundStyle(on ? color : palette.inactive)
     }
 }

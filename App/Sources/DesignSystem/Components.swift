@@ -281,3 +281,57 @@ struct SettingsPage<Content: View>: View {
         .scrollIndicators(.hidden)
     }
 }
+
+// MARK: - Glisser pour fermer
+
+/// Direction dans laquelle on glisse un élément pour le fermer.
+enum DismissDirection { case down, up, left }
+
+private struct SwipeToDismiss: ViewModifier {
+    let direction: DismissDirection
+    let threshold: CGFloat
+    let action: () -> Void
+    @State private var drag: CGFloat = 0
+
+    private func amount(_ t: CGSize) -> CGFloat {
+        switch direction {
+        case .down: max(0, t.height)
+        case .up: max(0, -t.height)
+        case .left: max(0, -t.width)
+        }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: direction == .left ? -drag : 0,
+                    y: direction == .down ? drag : (direction == .up ? -drag : 0))
+            .opacity(1 - Double(min(drag / (threshold * 3), 0.5)))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 12)
+                    .onChanged { drag = amount($0.translation) }
+                    .onEnded { value in
+                        let predicted = amount(value.predictedEndTranslation)
+                        if drag > threshold || predicted > threshold * 2 {
+                            withAnimation(.spring(duration: 0.3)) { action() }
+                        }
+                        withAnimation(.spring(duration: 0.3)) { drag = 0 }
+                    }
+            )
+    }
+}
+
+extension View {
+    /// L'élément suit le doigt et se ferme au-delà du seuil (ou sur un geste rapide).
+    func swipeToDismiss(_ direction: DismissDirection = .down, threshold: CGFloat = 70,
+                        perform action: @escaping () -> Void) -> some View {
+        modifier(SwipeToDismiss(direction: direction, threshold: threshold, action: action))
+    }
+}
+
+/// Poignée visuelle indiquant qu'un panneau se ferme en glissant.
+struct GrabHandle: View {
+    @Environment(\.palette) private var palette
+    var body: some View {
+        Capsule().fill(palette.inactive).frame(width: 40, height: 5).padding(.vertical, 6)
+    }
+}

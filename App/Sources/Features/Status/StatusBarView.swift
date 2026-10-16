@@ -1,58 +1,37 @@
 import SwiftUI
 
+/// Barre de statut flottante sur la carte : heure, température extérieure réelle,
+/// état des liaisons (GPS, OBD, Spotify). Rien de décoratif.
 struct StatusBarView: View {
     @Environment(VehicleState.self) private var vehicle
+    @Environment(LocationFeed.self) private var feed
+    @Environment(SpotifyController.self) private var spotify
+    @Environment(AppSettings.self) private var settings
     @Environment(\.palette) private var palette
-
-    init() {}
 
     var body: some View {
         HStack(spacing: 16) {
-            // Lock status icon
-            Image(systemName: vehicle.locked ? "lock.fill" : "lock.open.fill")
-
-            // Current time updated every minute
             TimelineView(.everyMinute) { timeline in
                 Text(timeline.date.formatted(Date.FormatStyle().hour().minute()))
             }
-
-            // Outside temperature
             if let temp = vehicle.outsideTempC {
-                Text("\(Int(temp)) °C")
+                Text("\(Int(temp.rounded())) °C")
             }
-
-            // Profile indicator
-            HStack(spacing: 6) {
-                Image(systemName: "person.fill")
-                Text("Profil")
+            if settings.demoMode {
+                Text("DÉMO")
+                    .font(TeslaFont.ui(11, .bold))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill(Theme.accent.opacity(0.18)))
+                    .foregroundStyle(Theme.accent)
             }
-
             Spacer()
-
-            // Location source indicator
             Image(systemName: "location.fill")
-                .foregroundStyle(vehicle.locationSource != .none ? Theme.accent : palette.inactive)
-
-            // OBD connection indicator
+                .foregroundStyle(feed.source == .phone ? Theme.accent
+                                 : (feed.source == .device ? palette.textSecondary : palette.inactive))
             Image(systemName: "antenna.radiowaves.left.and.right")
                 .foregroundStyle(vehicle.obdConnected ? Theme.teal : palette.inactive)
-
-            // Passenger airbag badge
-            HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.yellow)
-
-                Text("AIRBAG\nPASSAGER OFF")
-                    .font(.system(size: 8, weight: .bold))
-                    .lineLimit(2)
-                    .lineSpacing(-1)
-                    .multilineTextAlignment(.leading)
-                    .foregroundStyle(.white)
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Color.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 4))
+            Image(systemName: "music.note")
+                .foregroundStyle(spotify.isConnected ? Theme.telltaleGreen : palette.inactive)
         }
         .font(TeslaFont.ui(14, .medium))
         .foregroundStyle(palette.textPrimary)

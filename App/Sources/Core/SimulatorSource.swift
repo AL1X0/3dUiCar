@@ -50,6 +50,8 @@ final class SimulatorSource {
         vehicle.speedSource = .simulator
         vehicle.locationSource = .simulator
         vehicle.lowBeam = true
+        vehicle.fuelLevel = 0.9
+        if vehicle.outsideTempC == nil { vehicle.outsideTempC = 18 }
 
         // Phase calculations
         var speed: Double = 0

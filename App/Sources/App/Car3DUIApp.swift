@@ -8,6 +8,7 @@ struct Car3DUIApp: App {
     @State private var esp32: ESP32Source
     @State private var nav = NavigationModel()
     @State private var companion: CompanionReceiver
+    @State private var weather: WeatherService
     @State private var settings = AppSettings()
     @State private var spotify = SpotifyController()
     @Environment(\.scenePhase) private var scenePhase
@@ -21,6 +22,7 @@ struct Car3DUIApp: App {
         _sensors = State(initialValue: SensorHub(vehicle: v, feed: f))
         _esp32 = State(initialValue: ESP32Source(vehicle: v))
         _companion = State(initialValue: CompanionReceiver(feed: f, vehicle: v))
+        _weather = State(initialValue: WeatherService(vehicle: v))
     }
 
     var body: some Scene {
@@ -34,6 +36,9 @@ struct Car3DUIApp: App {
                 .environment(esp32)
                 .environment(nav)
                 .onOpenURL { spotify.handle(url: $0) }
+                .onChange(of: feed.location) { _, loc in
+                    if let loc { weather.update(location: loc) }
+                }
                 .onAppear {
                     nav.settings = settings
                     sensors.startLocation()
@@ -58,8 +63,10 @@ struct RootView: View {
     @Environment(SpotifyController.self) private var spotify
     @Environment(SensorHub.self) private var sensors
     @Environment(LocationFeed.self) private var feed
+    @Environment(NavigationModel.self) private var nav
     @Environment(\.colorScheme) private var systemScheme
     @State private var simulator: SimulatorSource?
+    @State private var volume = SystemVolume()
     private let tripTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var scheme: ColorScheme {
@@ -76,9 +83,14 @@ struct RootView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     CarPanelView()
-                        .frame(width: geo.size.width * Theme.leftPanelRatio)
+                        .frame(width: geo.size.width * settings.carPanelRatio)
                     MapPanelView()
                         .overlay(alignment: .bottom) {
+                            if settings.libraryOpen {
+                                SpotifyLibraryView()
+                                    .padding(.top, 68)
+                                    .transition(.move(edge: .bottom))
+                            }
                             if settings.settingsOpen {
                                 SettingsPanel()
                                     .padding(.top, 68)
@@ -87,14 +99,20 @@ struct RootView: View {
                         }
                         .clipped()
                 }
+                .overlay(alignment: .leading) {
+                    PanelDivider(totalWidth: geo.size.width)
+                        .offset(x: geo.size.width * settings.carPanelRatio - PanelDivider.hitWidth / 2)
+                }
                 DockView(onCarTap: toggleSettings, onApp: openApp)
                     .frame(height: Theme.dockHeight)
             }
         }
+        .background(VolumeHost(volume: volume).frame(width: 1, height: 1))
+        .environment(volume)
         .environment(\.palette, palette)
         .environment(\.colorScheme, scheme)
         .preferredColorScheme(settings.appearance == .auto ? nil : scheme)
-        .dynamicTypeSize(settings.largeText ? .xLarge : .large)
+        .dynamicTypeSize(settings.largeText ? .xxLarge : .large)
         .background(palette.dock)
         .ignoresSafeArea(edges: .bottom)
         .statusBarHidden()
@@ -122,21 +140,22 @@ struct RootView: View {
     }
 
     private func openApp(_ app: DockApp) {
-        switch app {
-        case .music, .audio:
-            if spotify.isConnected {
-                UIApplication.shared.open(URL(string: "spotify:")!)
-            } else {
-                spotify.authorize()
+        withAnimation(.spring(duration: 0.35)) {
+            switch app {
+            case .navigation:
+                settings.settingsOpen = false
+                nav.beginSearch()
+            case .spotify:
+                settings.mediaHidden = false
+                settings.libraryOpen.toggle()
+                spotify.ensureConnected()
+            case .trips, .engine:
+                settings.selectedSection = app == .trips ? .trips : .engine
+                settings.settingsOpen = true
             }
-        case .phone:
-            UIApplication.shared.open(URL(string: "tel:")!)
-        default:
-            break
         }
     }
 
-    /// Mode démo = trajet simulé ; sinon capteurs réels de l'iPad (gyroscope, GPS).
     private func applyDemoMode() {
         if simulator == nil { simulator = SimulatorSource(vehicle: vehicle) }
         guard let simulator else { return }
@@ -159,5 +178,41 @@ struct RootView: View {
     private func applyBrightness() {
         guard !settings.brightnessAuto else { return }
         UIScreen.main.brightness = settings.brightness
+    }
+}
+
+/// Séparateur voiture / carte : glisser pour redimensionner, double-tap pour revenir à 33 %.
+struct PanelDivider: View {
+    static let hitWidth: CGFloat = 36
+    let totalWidth: CGFloat
+    @Environment(AppSettings.self) private var settings
+    @Environment(\.palette) private var palette
+    @State private var startRatio: Double?
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.clear)
+            Capsule()
+                .fill(startRatio == nil ? palette.inactive.opacity(0.7) : Theme.accent)
+                .frame(width: 5, height: 64)
+                .shadow(color: .black.opacity(0.2), radius: 2)
+        }
+        .frame(width: Self.hitWidth)
+        .frame(maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 2, coordinateSpace: .global)
+                .onChanged { g in
+                    if startRatio == nil { startRatio = settings.carPanelRatio }
+                    let r = (startRatio ?? 0.33) + Double(g.translation.width / totalWidth)
+                    settings.carPanelRatio = min(max(r, AppSettings.carPanelRange.lowerBound),
+                                                 AppSettings.carPanelRange.upperBound)
+                }
+                .onEnded { _ in startRatio = nil }
+        )
+        .onTapGesture(count: 2) {
+            withAnimation(.spring(duration: 0.35)) { settings.carPanelRatio = 0.33 }
+        }
+        .accessibilityLabel("Séparateur voiture / carte")
     }
 }

@@ -86,7 +86,7 @@ enum TeslaFont {
         case .medium: "Inter-Medium"
         default: "Inter-Regular"
         }
-        return .custom(name, fixedSize: size)
+        return .custom(name, size: size, relativeTo: .body)
     }
     static let speed = ui(72, .regular)
     static let caption = ui(12, .semibold)

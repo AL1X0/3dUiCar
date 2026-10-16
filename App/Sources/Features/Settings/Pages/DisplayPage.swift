@@ -2,20 +2,18 @@ import SwiftUI
 
 struct DisplayPage: View {
     @Environment(AppSettings.self) private var settings
-    @Environment(VehicleState.self) private var vehicle
     @Environment(\.palette) private var palette
 
     var body: some View {
         @Bindable var s = settings
-        @Bindable var v = vehicle
 
         SettingsPage {
             SettingsTitle(title: "Apparence")
             TeslaSegmented(
                 options: [
-                    (.auto, "Auto"),
-                    (.light, "Clair"),
-                    (.dark, "Sombre")
+                    (value: Appearance.auto, label: "Auto"),
+                    (value: Appearance.light, label: "Clair"),
+                    (value: Appearance.dark, label: "Sombre")
                 ],
                 selection: $s.appearance
             )
@@ -23,14 +21,21 @@ struct DisplayPage: View {
             SettingsTitle(title: "Luminosité")
             HStack(spacing: 12) {
                 BrightnessSlider(value: $s.brightness)
-                AccentButton(title: "Auto", isOn: s.brightnessAuto, width: 120) {
+                    .disabled(s.brightnessAuto)
+                    .opacity(s.brightnessAuto ? 0.4 : 1.0)
+
+                AccentButton(
+                    title: "Auto",
+                    isOn: s.brightnessAuto,
+                    width: 120
+                ) {
                     s.brightnessAuto.toggle()
                 }
             }
 
             ToggleRow(
                 title: "Grand texte",
-                description: "Agrandit les textes de l'interface",
+                description: "Agrandit tous les textes",
                 isOn: $s.largeText
             )
 
@@ -39,8 +44,8 @@ struct DisplayPage: View {
             SettingsTitle(title: "Voiture 3D")
             TeslaSegmented(
                 options: [
-                    (.paint, "Peinture"),
-                    (.clay, "Argile")
+                    (value: CarFinish.paint, label: "Peinture blanche"),
+                    (value: CarFinish.clay, label: "Argile")
                 ],
                 selection: $s.carFinish
             )
@@ -53,10 +58,39 @@ struct DisplayPage: View {
 
             SettingsDivider()
 
-            SettingsTitle(title: "Unités")
-            InfoRow(label: "Vitesse", value: "km/h")
-            InfoRow(label: "Température", value: "°C")
-            InfoRow(label: "Distance", value: "km")
+            SettingsTitle(title: "Disposition")
+            Text("Glisse le séparateur entre la voiture et la carte pour redimensionner. Double-tap dessus pour revenir à la taille par défaut.")
+                .font(TeslaFont.ui(13))
+                .foregroundStyle(palette.textSecondary)
+
+            HStack(spacing: 12) {
+                AccentButton(
+                    title: "Compacte",
+                    isOn: abs(s.carPanelRatio - 0.25) < 0.02
+                ) {
+                    withAnimation(.spring) {
+                        s.carPanelRatio = 0.25
+                    }
+                }
+
+                AccentButton(
+                    title: "Standard",
+                    isOn: abs(s.carPanelRatio - 0.33) < 0.02
+                ) {
+                    withAnimation(.spring) {
+                        s.carPanelRatio = 0.33
+                    }
+                }
+
+                AccentButton(
+                    title: "Large",
+                    isOn: abs(s.carPanelRatio - 0.5) < 0.02
+                ) {
+                    withAnimation(.spring) {
+                        s.carPanelRatio = 0.5
+                    }
+                }
+            }
         }
     }
 }
