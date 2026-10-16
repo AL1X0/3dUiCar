@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.2.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
@@ -41,4 +41,5 @@ targets:
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "La position sert à la navigation et à l'animation de la voiture."
         INFOPLIST_KEY_NSMotionUsageDescription: "Les capteurs de mouvement animent la caisse de la voiture 3D."
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "Le Bluetooth relie l'app au module OBD ESP32."
+        INFOPLIST_KEY_NSAppleMusicUsageDescription: "L'accès à la musique alimente le lecteur du tableau de bord."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Le réseau local reçoit le GPS de l'iPhone compagnon."

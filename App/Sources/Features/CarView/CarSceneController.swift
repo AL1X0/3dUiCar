@@ -38,6 +38,13 @@ final class CarSceneController {
     private var updateSub: Cancellable?
 
     var cameraMode: CameraMode = .parked
+    var showLanes = true
+    /// Finition « argile » gris clair façon visualisation Tesla, ou peinture d'origine.
+    var clayFinish = false {
+        didSet { if clayFinish != oldValue { applyFinish() } }
+    }
+    private var originalMaterials: [ObjectIdentifier: [any RealityKit.Material]] = [:]
+    private var carModels: [ModelEntity] = []
     var backgroundColor: UIColor = .white {
         didSet {
             arView.environment.background = .color(backgroundColor)
@@ -80,23 +87,37 @@ final class CarSceneController {
         do {
             let car = try await Entity(named: "Car", in: .main)
             carRoot.addChild(car)
+            // Chaque pièce animée est placée sous un pivot aligné sur le repère voiture :
+            // l'orientation d'origine des nœuds USD (conversion d'axes) est conservée.
             for w in ["FL", "FR", "RL", "RR"] {
-                steer[w] = car.findEntity(named: "Wheel_\(w)_Steer")
-                spin[w] = car.findEntity(named: "Wheel_\(w)_Spin")
+                let st = pivot(for: car.findEntity(named: "Wheel_\(w)_Steer"), under: carRoot)
+                steer[w] = st
+                if let st { spin[w] = pivot(for: car.findEntity(named: "Wheel_\(w)_Spin"), under: st) }
             }
-            doorFL = car.findEntity(named: "Door_FL")
-            doorFR = car.findEntity(named: "Door_FR")
-            hood = car.findEntity(named: "Hood")
-            trunk = car.findEntity(named: "Trunk")
             // Les éléments suspendus passent sous `sprung` (les roues restent au sol)
-            for e in [car.findEntity(named: "Body"), doorFL, doorFR, hood, trunk].compactMap({ $0 }) {
-                e.setParent(sprung, preservingWorldTransform: true)
-            }
-            brakeLightModels = Self.models(in: car).filter { $0.name.lowercased().contains("red_glass") }
+            car.findEntity(named: "Body")?.setParent(sprung, preservingWorldTransform: true)
+            doorFL = pivot(for: car.findEntity(named: "Door_FL"), under: sprung)
+            doorFR = pivot(for: car.findEntity(named: "Door_FR"), under: sprung)
+            hood = pivot(for: car.findEntity(named: "Hood"), under: sprung)
+            trunk = pivot(for: car.findEntity(named: "Trunk"), under: sprung)
+            carModels = Self.models(in: car)
+            brakeLightModels = carModels.filter { $0.name.lowercased().contains("red_glass") }
+            applyFinish()
             setupBlinkers(bounds: car.visualBounds(relativeTo: carRoot))
         } catch {
             print("Car.usdz introuvable : \(error)")
         }
+    }
+
+    /// Insère un pivot sans rotation à l'origine de `e` (charnière / centre de roue).
+    private func pivot(for e: Entity?, under parent: Entity) -> Entity? {
+        guard let e else { return nil }
+        let p = Entity()
+        p.name = e.name + "_Pivot"
+        parent.addChild(p)
+        p.position = e.position(relativeTo: parent)
+        e.setParent(p, preservingWorldTransform: true)
+        return p
     }
 
     private func setupLights() {
@@ -112,17 +133,44 @@ final class CarSceneController {
         anchor.addChild(fill)
     }
 
-    private static func groundMaterial(_ color: UIColor) -> SimpleMaterial {
-        var m = SimpleMaterial(color: color, roughness: 1, isMetallic: false)
-        m.metallic = 0
-        return m
+    /// Sol non éclairé de la couleur du fond : pas d'horizon visible (rendu Tesla).
+    private static func groundMaterial(_ color: UIColor) -> UnlitMaterial {
+        UnlitMaterial(color: color)
     }
 
     private func setupGround() {
-        let plane = ModelEntity(mesh: .generatePlane(width: 200, depth: 200),
+        let plane = ModelEntity(mesh: .generatePlane(width: 400, depth: 400),
                                 materials: [Self.groundMaterial(backgroundColor)])
         anchor.addChild(plane)
         ground = plane
+
+        // Ombre de contact douce sous la voiture
+        if let tex = Self.contactShadowTexture() {
+            var m = UnlitMaterial()
+            m.color = .init(tint: .black, texture: .init(tex))
+            m.blending = .transparent(opacity: 1)
+            let shadow = ModelEntity(mesh: .generatePlane(width: 2.9, depth: 5.4), materials: [m])
+            shadow.position.y = 0.003
+            carRoot.addChild(shadow)
+        }
+    }
+
+    private static func contactShadowTexture() -> TextureResource? {
+        let size = 256
+        guard let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8,
+                                  bytesPerRow: size * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                        colors: [UIColor(white: 0, alpha: 0.6).cgColor,
+                                                 UIColor(white: 0, alpha: 0.25).cgColor,
+                                                 UIColor(white: 0, alpha: 0).cgColor] as CFArray,
+                                        locations: [0, 0.55, 1])
+        else { return nil }
+        let c = CGPoint(x: size / 2, y: size / 2)
+        ctx.drawRadialGradient(gradient, startCenter: c, startRadius: 0, endCenter: c,
+                               endRadius: CGFloat(size) / 2, options: [])
+        guard let image = ctx.makeImage() else { return nil }
+        return try? TextureResource.generate(from: image, options: .init(semantic: .color))
     }
 
     /// Lignes de voie bleues (vue conduite) : segments repositionnés selon la courbure.
@@ -209,7 +257,7 @@ final class CarSceneController {
     }
 
     private func updateLanes(speed: Float, yaw: Float) {
-        let show = cameraMode == .drive
+        let show = cameraMode == .drive && showLanes
         let k = speed > 1.5 ? yaw / speed : 0          // courbure (1/m), + = gauche
         for (i, pair) in zip(laneLeft, laneRight).enumerated() {
             let z = Float(i) * 2 - 6
@@ -232,6 +280,23 @@ final class CarSceneController {
         camPos += (pos - camPos) * a
         camTarget += (target - camTarget) * a
         camera.look(at: camTarget, from: camPos, relativeTo: nil)
+    }
+
+    private func applyFinish() {
+        let clay = SimpleMaterial(color: UIColor(white: 0.93, alpha: 1), roughness: 0.55, isMetallic: false)
+        let glass = SimpleMaterial(color: UIColor(white: 0.15, alpha: 1), roughness: 0.1, isMetallic: false)
+        for m in carModels where !brakeLightModels.contains(where: { $0 === m }) {
+            guard var model = m.model else { continue }
+            let id = ObjectIdentifier(m)
+            if originalMaterials[id] == nil { originalMaterials[id] = model.materials }
+            if clayFinish {
+                let isGlass = m.name.lowercased().contains("glass")
+                model.materials = model.materials.map { _ in isGlass ? glass : clay }
+            } else if let orig = originalMaterials[id] {
+                model.materials = orig
+            }
+            m.model = model
+        }
     }
 
     private func setBrakeLights(_ on: Bool) {

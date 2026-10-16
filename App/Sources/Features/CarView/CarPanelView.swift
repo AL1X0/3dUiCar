@@ -12,6 +12,7 @@ struct CarSceneView: UIViewRepresentable {
 /// Panneau gauche : voiture 3D + HUD (rapport, vitesse, témoins) + raccourcis ouvrants à l'arrêt.
 struct CarPanelView: View {
     @Environment(VehicleState.self) private var vehicle
+    @Environment(AppSettings.self) private var settings
     @Environment(\.palette) private var palette
     @Environment(\.colorScheme) private var colorScheme
     @State private var controller: CarSceneController?
@@ -27,6 +28,9 @@ struct CarPanelView: View {
                 openingShortcuts
                     .frame(maxHeight: .infinity, alignment: .center)
             }
+            MediaPlayerView()
+                .padding(12)
+                .frame(maxHeight: .infinity, alignment: .bottom)
         }
         .onAppear {
             if controller == nil { controller = CarSceneController(vehicle: vehicle) }
@@ -34,6 +38,8 @@ struct CarPanelView: View {
         }
         .onChange(of: vehicle.gear) { syncController() }
         .onChange(of: colorScheme) { syncController() }
+        .onChange(of: settings.showLanes) { syncController() }
+        .onChange(of: settings.carFinish) { syncController() }
     }
 
     /// Étiquettes « Ouvrir capot / coffre » du Figma (Frunk / Trunk Open).
@@ -79,5 +85,7 @@ struct CarPanelView: View {
         guard let controller else { return }
         controller.cameraMode = vehicle.gear == .park ? .parked : .drive
         controller.backgroundColor = UIColor(palette.background)
+        controller.showLanes = settings.showLanes
+        controller.clayFinish = settings.carFinish == .clay
     }
 }

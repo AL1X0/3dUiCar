@@ -54,5 +54,27 @@ final class VehicleState {
     var locationSource: SignalSource = .none
     var obdConnected = false
 
+    // Ordinateur de bord
+    var odometerKm: Double = 48_250
+    var tripDistanceKm: Double = 0
+    var tripSeconds: Double = 0
+    var tripMaxSpeedKmh: Double = 0
+
     var isMoving: Bool { speedKmh > 1 }
+    var tripAverageKmh: Double { tripSeconds > 0 ? tripDistanceKm / (tripSeconds / 3600) : 0 }
+
+    /// Intègre la distance parcourue (appelé à 1 Hz).
+    func integrateTrip(dt: Double) {
+        let km = speedKmh / 3600 * dt
+        odometerKm += km
+        tripDistanceKm += km
+        if isMoving { tripSeconds += dt }
+        tripMaxSpeedKmh = max(tripMaxSpeedKmh, speedKmh)
+    }
+
+    func resetTrip() {
+        tripDistanceKm = 0
+        tripSeconds = 0
+        tripMaxSpeedKmh = 0
+    }
 }

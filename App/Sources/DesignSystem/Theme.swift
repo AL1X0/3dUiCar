@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreText
 
 // Tokens issus de la librairie Figma « Tesla Dashboard UI Component Library ».
 
@@ -76,12 +77,24 @@ extension EnvironmentValues {
     }
 }
 
-/// Typo Figma : Inter (Medium 14/18, SemiBold 18–28, Bold 24). SF Pro en est très proche ;
-/// on passera à Inter embarquée si l'écart se voit.
+/// Typo Figma : Inter (Medium 14/18, SemiBold 18–28, Bold 24), embarquée dans Resources/Fonts.
 enum TeslaFont {
     static func ui(_ size: CGFloat, _ weight: Font.Weight = .medium) -> Font {
-        .system(size: size, weight: weight, design: .default)
+        let name = switch weight {
+        case .bold, .heavy, .black: "Inter-Bold"
+        case .semibold: "Inter-SemiBold"
+        case .medium: "Inter-Medium"
+        default: "Inter-Regular"
+        }
+        return .custom(name, fixedSize: size)
     }
-    static let speed = Font.system(size: 72, weight: .regular, design: .default)
+    static let speed = ui(72, .regular)
     static let caption = ui(12, .semibold)
+
+    /// Enregistre les TTF du bundle (évite de dépendre de UIAppFonts dans l'Info.plist).
+    static func registerFonts() {
+        for url in Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? [] {
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+    }
 }
