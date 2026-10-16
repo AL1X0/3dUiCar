@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.6.1",
+          "buildVersion": "22",
+          "date": "2026-10-16T21:30:47Z",
+          "localizedDescription": "Correctifs : liaison GPS iPhone stable, Spotify (lecture sur l'iPad, suivant/précédent, reprise après ouverture de Spotify, favoris), saccades de la bibliothèque supprimées.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.1/Car3DUI.ipa",
+          "size": 9583375,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.6.0",
           "buildVersion": "19",
           "date": "2026-10-16T21:07:07Z",
@@ -83,11 +92,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon."
         }
       },
-      "version": "0.6.0",
-      "versionDate": "2026-10-16T21:07:07Z",
-      "versionDescription": "App plus fluide, rotation autour de la voiture 3D, liaison GPS iPhone fiabilisée (Wi-Fi pair-à-pair, IP manuelle), Spotify reconnecté en permanence (nouvelle connexion à refaire une fois), journal complet partageable (Réglages › Journal).",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.0/Car3DUI.ipa",
-      "size": 9571778,
+      "version": "0.6.1",
+      "versionDate": "2026-10-16T21:30:47Z",
+      "versionDescription": "Correctifs : liaison GPS iPhone stable, Spotify (lecture sur l'iPad, suivant/précédent, reprise après ouverture de Spotify, favoris), saccades de la bibliothèque supprimées.",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.1/Car3DUI.ipa",
+      "size": 9583375,
       "screenshotURLs": [],
       "permissions": []
     },
@@ -102,6 +111,15 @@
       "category": "utilities",
       "screenshots": [],
       "versions": [
+        {
+          "version": "0.6.1",
+          "buildVersion": "22",
+          "date": "2026-10-16T21:30:47Z",
+          "localizedDescription": "Correctifs : liaison GPS iPhone stable, Spotify (lecture sur l'iPad, suivant/précédent, reprise après ouverture de Spotify, favoris), saccades de la bibliothèque supprimées.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.1/Car3DUICompanion.ipa",
+          "size": 1320101,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "0.6.0",
           "buildVersion": "19",
@@ -138,11 +156,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local sert à trouver l'iPad et lui envoyer la position."
         }
       },
-      "version": "0.6.0",
-      "versionDate": "2026-10-16T21:07:07Z",
-      "versionDescription": "App plus fluide, rotation autour de la voiture 3D, liaison GPS iPhone fiabilisée (Wi-Fi pair-à-pair, IP manuelle), Spotify reconnecté en permanence (nouvelle connexion à refaire une fois), journal complet partageable (Réglages › Journal).",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.0/Car3DUICompanion.ipa",
-      "size": 1320100,
+      "version": "0.6.1",
+      "versionDate": "2026-10-16T21:30:47Z",
+      "versionDescription": "Correctifs : liaison GPS iPhone stable, Spotify (lecture sur l'iPad, suivant/précédent, reprise après ouverture de Spotify, favoris), saccades de la bibliothèque supprimées.",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.1/Car3DUICompanion.ipa",
+      "size": 1320101,
       "screenshotURLs": [],
       "permissions": []
     }
