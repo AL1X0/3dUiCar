@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.3.0",
+          "buildVersion": "10",
+          "date": "2026-10-16T19:44:08Z",
+          "localizedDescription": "Voiture 3D refaite en blanc (carrosserie nette, portes/capot/coffre corrects), lecteur Spotify, capteurs réels de l'iPad avec calibration du support (Réglages › Aides à la conduite).",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.3.0/Car3DUI.ipa",
+          "size": 9321386,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.2.0",
           "buildVersion": "7",
           "date": "2026-10-16T19:20:44Z",
