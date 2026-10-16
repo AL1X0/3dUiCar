@@ -188,7 +188,7 @@ Source : *Tesla Dashboard UI Component Library (Community)* — librairie basée
 | Phase | Contenu | Livrable |
 |---|---|---|
 | **0. Setup** ✅ | Repo + XcodeGen + workflow GitHub Actions (`.ipa` non signé), modèle 3D simplifié en USDZ, tokens + police Inter + icônes exportés du Figma | `.ipa` qui affiche la voiture sur l'iPad Pro |
-| **1. Coquille UI** | Panneau gauche (PRND, vitesse, témoins), barre de statut, dock, panneau Réglages (arbre + Controls/Lights/Display…), lecteur média compact, clair/sombre, `SimulatorSource` | UI complète en données simulées |
+| **1. Coquille UI** ✅ | Panneau gauche (PRND, vitesse, témoins), barre de statut, dock, panneau Réglages (arbre + Controls/Lights/Display…), lecteur média compact, clair/sombre, `SimulatorSource` | UI complète en données simulées |
 | **2. Voiture vivante + capteurs** | CoreMotion, calibration, roulis/tangage/roues/braquage/feux, contrôles capot/coffre | Ça bouge pour de vrai en voiture |
 | **3. Navigation + GPS** | MapKit complet, app compagnon iPhone, guidage vocal, média | Utilisable au quotidien |
 | **4. ESP32 + OBD standard** | Montage ESP32 + transceiver, firmware poller PID, GATT, `ESP32Source`, jauges, conso, codes défaut | Données moteur réelles |
@@ -200,6 +200,12 @@ Source : *Tesla Dashboard UI Component Library (Community)* — librairie basée
 - `Car.usdz` : ~101 k triangles, textures 1K, pivots `Wheel_*_Steer/Spin`, `Door_FL/FR`, `Hood`, `Trunk`, `Body` (script `Tools/model/build_car.py`).
 - Scène 3D via `ARView` non-AR (API la plus éprouvée) plutôt que `RealityView`.
 - Typo système (SF Pro) en attendant Inter ; icônes SF Symbols en attendant l'export Figma (phase 1).
+
+### Fait en phase 1 (16/10/2026, v0.2.0)
+- Correctif 3D : pivots dédiés (l'orientation des nœuds USD était écrasée → portes/coffre tournés de 90°), sol uni + ombre de contact.
+- Panneau Réglages 14 sections (icône voiture du dock), composants Figma, réglages persistés (UserDefaults).
+- Lecteur Apple Music (MPMusicPlayerController), police Inter embarquée, 40 icônes extraites du Figma.
+- CI : échoue désormais réellement si `xcodebuild` échoue.
 
 ## 11. Risques
 
