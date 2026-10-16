@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.2.0",
+          "buildVersion": "7",
+          "date": "2026-10-16T19:20:44Z",
+          "localizedDescription": "Phase 1 : portes/coffre corrigés, sol sans horizon, panneau Réglages (icône voiture du dock), lecteur Apple Music, police Inter, icônes Figma, finition argile.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.2.0/Car3DUI.ipa",
+          "size": 7462814,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.1.0",
           "buildVersion": "3",
           "date": "2026-10-16T18:54:18Z",
