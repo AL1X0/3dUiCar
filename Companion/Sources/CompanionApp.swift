@@ -79,7 +79,7 @@ struct CompanionView: View {
                     }
 
                     // Authorization Warning if not "Always"
-                    if sender.authorizationStatus != .authorizedAlways {
+                    if sender.authorization != .authorizedAlways {
                         VStack(spacing: 10) {
                             HStack(alignment: .top, spacing: 10) {
                                 Image(systemName: "exclamationmark.triangle.fill")
