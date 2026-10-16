@@ -45,12 +45,12 @@ struct CarHUDView: View {
             if vehicle.gear != .park {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: -6) {
-                        Text("\(Int(vehicle.speedKmh.rounded()))")
+                        Text("\(vehicle.displaySpeed)")
                             .font(TeslaFont.speed)
                             .contentTransition(.numericText())
                             .monospacedDigit()
                             .foregroundColor(palette.textPrimary)
-                            .animation(.easeOut(duration: 0.2), value: Int(vehicle.speedKmh))
+                            .animation(.easeOut(duration: 0.2), value: vehicle.displaySpeed)
 
                         Text("KM/H")
                             .font(TeslaFont.caption)

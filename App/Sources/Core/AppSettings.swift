@@ -6,7 +6,7 @@ enum CarFinish: String, CaseIterable, Sendable { case paint, clay }
 
 /// Sections du panneau Réglages : uniquement des fonctions qui agissent réellement.
 enum SettingsSection: String, CaseIterable, Identifiable, Sendable {
-    case search, controls, display, navigation, music, trips, engine, sensors, service, software
+    case search, controls, display, navigation, music, trips, engine, sensors, service, software, logs
 
     var id: String { rawValue }
 
@@ -22,6 +22,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Sendable {
         case .sensors: "Capteurs"
         case .service: "Module OBD"
         case .software: "Logiciel"
+        case .logs: "Journal"
         }
     }
 
@@ -38,6 +39,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Sendable {
         case .sensors: "nav.steering"
         case .service: "nav.service"
         case .software: "nav.software"
+        case .logs: "nav.eye"
         }
     }
 }

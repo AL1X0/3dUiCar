@@ -16,6 +16,7 @@ final class SimulatorSource {
 
     func start() {
         guard loopTask == nil else { return }
+        Log.info(.app, "Mode démo : trajet simulé démarré")
 
         loopTask = Task { [weak self] in
             let clock = ContinuousClock()
@@ -47,10 +48,10 @@ final class SimulatorSource {
     // MARK: - Simulation Update
 
     private func updateVehicle(at t: Double) {
-        vehicle.speedSource = .simulator
-        vehicle.locationSource = .simulator
-        vehicle.lowBeam = true
-        vehicle.fuelLevel = 0.9
+        vehicle.set(\.speedSource, .simulator)
+        vehicle.set(\.locationSource, .simulator)
+        vehicle.set(\.lowBeam, true)
+        vehicle.set(\.fuelLevel, 0.9)
         if vehicle.outsideTempC == nil { vehicle.outsideTempC = 18 }
 
         // Phase calculations
@@ -125,9 +126,9 @@ final class SimulatorSource {
         }
 
         // Dynamics & Telemetry assignment
-        vehicle.gear = gear
+        vehicle.set(\.gear, gear)
         vehicle.speedKmh = max(0, speed)
-        vehicle.speedLimitKmh = limit
+        vehicle.set(\.speedLimitKmh, limit)
         vehicle.longitudinalG = longG
         vehicle.yawRateDegS = yawRate
         vehicle.roadPitchDeg = pitch
@@ -136,14 +137,14 @@ final class SimulatorSource {
         let yawRateRad = yawRate * .pi / 180.0
         vehicle.lateralG = (speedMps * yawRateRad) / 9.81
 
-        vehicle.braking = isBraking
-        vehicle.blinkerLeft = blinkLeft
-        vehicle.blinkerRight = blinkRight
+        vehicle.set(\.braking, isBraking)
+        vehicle.set(\.blinkerLeft, blinkLeft)
+        vehicle.set(\.blinkerRight, blinkRight)
 
         if vehicle.gear == .drive && vehicle.isMoving {
-            vehicle.rpm = min(6500.0, max(800.0, 800.0 + vehicle.speedKmh * 35.0))
+            vehicle.set(\.rpm, min(6500.0, max(800.0, 800.0 + vehicle.speedKmh * 35.0)))
         } else {
-            vehicle.rpm = 800.0
+            vehicle.set(\.rpm, 800.0)
         }
     }
 

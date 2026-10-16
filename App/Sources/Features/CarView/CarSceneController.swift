@@ -7,7 +7,7 @@ import Combine
 ///
 /// Repère du modèle (voir Tools/model/build_car.py) : Y haut, avant = +Z, gauche = +X, mètres.
 @MainActor
-final class CarSceneController {
+final class CarSceneController: NSObject {
     enum CameraMode { case drive, parked }
 
     let arView: ARView
@@ -37,6 +37,17 @@ final class CarSceneController {
     private var time: Double = 0
     private var updateSub: Cancellable?
 
+    // Orbite manuelle (glisser = tourner, pincer = zoomer, double-tap = vue par défaut)
+    private var userAzimuth: Float = 0
+    private var userElevation: Float = 0
+    private var userZoom: Float = 1
+    private var lastTouch = Date.distantPast
+
+    // Mesure de performance (journal toutes les 10 s)
+    private var perfFrames = 0
+    private var perfWorst: Float = 0
+    private var perfElapsed: Float = 0
+
     var cameraMode: CameraMode = .parked
     var showLanes = true
     /// Finition « argile » gris clair façon visualisation Tesla, ou peinture d'origine.
@@ -58,10 +69,13 @@ final class CarSceneController {
     init(vehicle: VehicleState) {
         self.vehicle = vehicle
         arView = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
+        super.init()
         arView.environment.background = .color(backgroundColor)
         arView.renderOptions.insert(.disableMotionBlur)
         arView.renderOptions.insert(.disableDepthOfField)
         arView.renderOptions.insert(.disableCameraGrain)
+        arView.renderOptions.insert(.disableGroundingShadows)
+        arView.renderOptions.insert(.disableAREnvironmentLighting)
         arView.scene.addAnchor(anchor)
 
         camera.camera.fieldOfViewInDegrees = 38
@@ -77,6 +91,40 @@ final class CarSceneController {
             MainActor.assumeIsolated { self?.tick(dt: dt) }
         }
         Task { await loadCar() }
+        installGestures()
+    }
+
+    // MARK: - Gestes d'orbite
+
+    private func installGestures() {
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        pan.maximumNumberOfTouches = 1
+        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        let reset = UITapGestureRecognizer(target: self, action: #selector(handleReset))
+        reset.numberOfTapsRequired = 2
+        [pan, pinch, reset].forEach(arView.addGestureRecognizer)
+    }
+
+    @objc private func handlePan(_ g: UIPanGestureRecognizer) {
+        let t = g.translation(in: arView)
+        g.setTranslation(.zero, in: arView)
+        userAzimuth -= Float(t.x) * 0.008
+        userElevation = max(-0.2, min(1.0, userElevation + Float(t.y) * 0.005))
+        lastTouch = Date()
+        if g.state == .ended { Log.debug(.scene3D, "orbite az=\(userAzimuth) el=\(userElevation)") }
+    }
+
+    @objc private func handlePinch(_ g: UIPinchGestureRecognizer) {
+        userZoom = max(0.45, min(2.2, userZoom / Float(g.scale)))
+        g.scale = 1
+        lastTouch = Date()
+    }
+
+    @objc private func handleReset() {
+        userAzimuth = 0
+        userElevation = 0
+        userZoom = 1
+        lastTouch = .distantPast
     }
 
     // MARK: - Mise en place
@@ -100,15 +148,16 @@ final class CarSceneController {
             brakeLightModels = carModels.filter { $0.name.lowercased().contains("red_glass") }
             applyFinish()
             setupBlinkers(bounds: car.visualBounds(relativeTo: carRoot))
+            Log.info(.scene3D, "Car.usdz chargé : \(carModels.count) maillages, pivots \(steer.count) roues")
         } catch {
-            print("Car.usdz introuvable : \(error)")
+            Log.error(.scene3D, "Car.usdz introuvable : \(error)")
         }
     }
 
     private func setupLights() {
         let sun = DirectionalLight()
         sun.light.intensity = 3500
-        sun.shadow = DirectionalLightComponent.Shadow(maximumDistance: 15, depthBias: 2)
+        // Pas d'ombre temps réel (coûteuse sur A12X) : l'ombre de contact suffit
         sun.look(at: .zero, from: [3, 8, 4], relativeTo: nil)
         anchor.addChild(sun)
 
@@ -244,31 +293,65 @@ final class CarSceneController {
 
         updateLanes(speed: speed, yaw: yaw)
         updateCamera(dt: dt)
+        measure(dt: dt)
     }
+
+    private func measure(dt: Float) {
+        perfFrames += 1
+        perfElapsed += dt
+        perfWorst = max(perfWorst, dt)
+        guard perfElapsed >= 10 else { return }
+        let fps = Float(perfFrames) / perfElapsed
+        let level: LogLevel = fps < 40 ? .warning : .debug
+        Log.write(level, .perf, String(format: "3D %.0f fps · pire image %.0f ms · %llu Mo · thermique %@",
+                                       fps, perfWorst * 1000, Log.memoryMB(),
+                                       ProcessInfo.processInfo.thermalState.label))
+        perfFrames = 0
+        perfElapsed = 0
+        perfWorst = 0
+    }
+
+    private var lanesVisible = true
 
     private func updateLanes(speed: Float, yaw: Float) {
         let show = cameraMode == .drive && showLanes
+        if show != lanesVisible {
+            lanesVisible = show
+            (laneLeft + laneRight).forEach { $0.isEnabled = show }
+        }
+        guard show else { return }
         let k = speed > 1.5 ? yaw / speed : 0          // courbure (1/m), + = gauche
         for (i, pair) in zip(laneLeft, laneRight).enumerated() {
             let z = Float(i) * 2 - 6
             let dx = 0.5 * k * z * z
             let heading = atan(k * z)
             for (e, side) in [(pair.0, Float(1)), (pair.1, Float(-1))] {
-                e.isEnabled = show
                 e.position = [side * 1.7 + dx, 0.006, z]
                 e.orientation = simd_quatf(angle: heading, axis: [0, 1, 0])
             }
         }
     }
 
+    /// Caméra en coordonnées sphériques autour d'une cible ; l'orbite de l'utilisateur s'ajoute.
+    /// En conduite, elle revient seule à la vue arrière 6 s après le dernier geste.
     private func updateCamera(dt: Float) {
-        let (pos, target): (SIMD3<Float>, SIMD3<Float>) = switch cameraMode {
-        case .drive: ([0, 3.4, -8.5], [0, 0.4, 6])
-        case .parked: ([4.6, 2.3, 5.8], [0, 0.55, 0])
+        let (target, azimuth, elevation, distance): (SIMD3<Float>, Float, Float, Float) = switch cameraMode {
+        case .drive: ([0, 0.5, 2.0], .pi, 0.36, 10.5)
+        case .parked: ([0, 0.55, 0], 0.67, 0.23, 7.6)
         }
-        let a = min(1, dt * 2.5)
+        if cameraMode == .drive, Date().timeIntervalSince(lastTouch) > 6 {
+            let k = min(1, dt * 1.5)
+            userAzimuth -= userAzimuth * k
+            userElevation -= userElevation * k
+            userZoom += (1 - userZoom) * k
+        }
+        let az = azimuth + userAzimuth
+        let el = max(0.05, min(1.35, elevation + userElevation))
+        let d = distance * userZoom
+        let pos = target + d * SIMD3(sin(az) * cos(el), sin(el), cos(az) * cos(el))
+        let a = min(1, dt * 6)
         camPos += (pos - camPos) * a
-        camTarget += (target - camTarget) * a
+        camTarget += (target - camTarget) * min(1, dt * 2.5)
         camera.look(at: camTarget, from: camPos, relativeTo: nil)
     }
 

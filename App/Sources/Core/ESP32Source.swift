@@ -53,6 +53,7 @@ final class ESP32Source: NSObject {
     private func scanIfPossible() {
         guard wanted, central.state == .poweredOn, peripheral == nil else { return }
         state = .scanning
+        Log.info(.obd, "Recherche du module ESP32…")
         central.scanForPeripherals(withServices: [Self.service])
     }
 
@@ -106,7 +107,7 @@ final class ESP32Source: NSObject {
         case 0x01: vehicle.rpm = v
         case 0x02:
             vehicle.speedKmh = v
-            vehicle.speedSource = .obd
+            vehicle.set(\.speedSource, .obd)
         case 0x03: vehicle.coolantTempC = v
         case 0x07: vehicle.fuelLevel = max(0, min(1, v / 100))
         case 0x20: vehicle.blinkerLeft = on
@@ -176,6 +177,7 @@ extension ESP32Source: CBCentralManagerDelegate, CBPeripheralDelegate {
             self.peripheral = peripheral
             peripheral.delegate = self
             state = .connecting
+            Log.info(.obd, "Module trouvé : \(peripheral.name ?? "?") RSSI \(RSSI)")
             central.stopScan()
             central.connect(peripheral)
         }
@@ -196,10 +198,11 @@ extension ESP32Source: CBCentralManagerDelegate, CBPeripheralDelegate {
     }
 
     private func reset() {
+        if state == .connected { Log.warning(.obd, "Module OBD déconnecté") }
         peripheral = nil
         command = nil
-        vehicle.obdConnected = false
-        vehicle.rpm = nil
+        vehicle.set(\.obdConnected, false)
+        vehicle.set(\.rpm, nil)
         manualGear = nil
         state = wanted ? .scanning : .off
         scanIfPossible()
@@ -224,7 +227,8 @@ extension ESP32Source: CBCentralManagerDelegate, CBPeripheralDelegate {
                 }
             }
             state = .connected
-            vehicle.obdConnected = true
+            Log.info(.obd, "Module OBD connecté")
+            vehicle.set(\.obdConnected, true)
         }
     }
 

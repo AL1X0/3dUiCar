@@ -24,6 +24,7 @@ final class WeatherService {
                   let current = json["current"] as? [String: Any],
                   let t = current["temperature_2m"] as? Double else { return }
             vehicle.outsideTempC = t
+            Log.debug(.weather, "Température extérieure \(t) °C")
         }
     }
 }

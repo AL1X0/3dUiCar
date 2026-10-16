@@ -31,6 +31,46 @@ struct SensorsPage: View {
                 value: feed.location.map { "±\(Int($0.horizontalAccuracy)) m" } ?? "—"
             )
 
+            SettingsCaption(text: "Liaison iPhone")
+
+            InfoRow(
+                label: "Écoute",
+                value: feed.listenerState
+            )
+
+            InfoRow(
+                label: "Messages reçus",
+                value: "\(feed.messagesReceived)"
+            )
+
+            InfoRow(
+                label: "Dernier message",
+                value: feed.lastMessageDate.map { $0.formatted(date: .omitted, time: .standard) } ?? "—"
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Adresse(s) IP de l'iPad à saisir dans l'app iPhone si besoin :")
+                    .font(TeslaFont.ui(13))
+                    .foregroundStyle(palette.textSecondary)
+
+                if feed.localAddresses.isEmpty {
+                    Text("Aucune adresse Wi-Fi")
+                        .font(TeslaFont.ui(14))
+                        .foregroundStyle(palette.textSecondary)
+                } else {
+                    ForEach(feed.localAddresses, id: \.self) { address in
+                        Text(address)
+                            .font(.system(size: 14, design: .monospaced))
+                            .foregroundStyle(palette.textPrimary)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+
+            AccentButton(title: "Relancer l'écoute", systemImage: "arrow.clockwise", width: 240) {
+                feed.restartListener?()
+            }
+
             Text("Installez l'application « 3dUiCar GPS » sur l'iPhone (même source SideStore), activez le partage de connexion de l'iPhone et connectez-y l'iPad.")
                 .font(TeslaFont.ui(13))
                 .foregroundStyle(palette.textSecondary)
@@ -80,10 +120,15 @@ struct CalibrationSection: View {
                     sensors.resetCalibration()
                 }
             }
-            InfoRow(label: "Accélération longitudinale", value: String(format: "%+.2f g", vehicle.longitudinalG))
-            InfoRow(label: "Accélération latérale", value: String(format: "%+.2f g", vehicle.lateralG))
-            InfoRow(label: "Lacet", value: String(format: "%+.0f °/s", vehicle.yawRateDegS))
-            InfoRow(label: "Pente", value: String(format: "%+.1f °", vehicle.roadPitchDeg))
+            // Valeurs à 50 Hz non observées : rafraîchies 4 fois par seconde
+            TimelineView(.periodic(from: .now, by: 0.25)) { _ in
+                VStack(spacing: 0) {
+                    InfoRow(label: "Accélération longitudinale", value: String(format: "%+.2f g", vehicle.longitudinalG))
+                    InfoRow(label: "Accélération latérale", value: String(format: "%+.2f g", vehicle.lateralG))
+                    InfoRow(label: "Lacet", value: String(format: "%+.0f °/s", vehicle.yawRateDegS))
+                    InfoRow(label: "Pente", value: String(format: "%+.1f °", vehicle.roadPitchDeg))
+                }
+            }
             InfoRow(label: "GPS", value: sensors.hasGPS ? "Fix GNSS" : "Indisponible (iPhone compagnon en phase 3)")
         }
     }

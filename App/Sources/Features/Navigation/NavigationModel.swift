@@ -135,6 +135,7 @@ final class NavigationModel: NSObject {
         do {
             let response = try await MKDirections(request: request).calculate()
             routes = response.routes
+            Log.info(.nav, "\(routes.count) itinéraire(s) vers \(destination.name ?? "?")")
             selectedRouteIndex = 0
             errorMessage = nil
             if let route {
@@ -143,12 +144,14 @@ final class NavigationModel: NSObject {
             }
         } catch {
             errorMessage = "Itinéraire impossible : \(error.localizedDescription)"
+            Log.error(.nav, "Calcul d'itinéraire : \(error)")
         }
     }
 
     func start() {
         guard route != nil else { return }
         phase = .navigating
+        Log.info(.nav, "Guidage démarré")
         stepIndex = firstMeaningfulStep()
         announced = []
         speak(currentStep?.instructions)
@@ -213,6 +216,7 @@ final class NavigationModel: NSObject {
         guard let since = offRouteSince, Date().timeIntervalSince(since) > 4, !isCalculating else { return }
         offRouteSince = nil
         speak("Recalcul de l'itinéraire.")
+        Log.info(.nav, "Hors itinéraire (\(Int(d)) m) : recalcul")
         Task {
             await calculate(alternatives: false)
             stepIndex = firstMeaningfulStep()

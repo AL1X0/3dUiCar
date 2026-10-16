@@ -89,6 +89,7 @@ struct SettingsPanel: View {
         case .sensors: SensorsPage()
         case .service: ServicePage()
         case .software: SoftwarePage()
+        case .logs: LogsPage()
         }
     }
 }

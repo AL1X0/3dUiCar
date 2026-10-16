@@ -16,18 +16,26 @@ enum SignalSource: String, Sendable {
 @MainActor
 @Observable
 final class VehicleState {
-    // Conduite
-    var speedKmh: Double = 0
+    // Conduite. La vitesse brute change en continu : elle n'est pas observée,
+    // l'interface lit `displaySpeed` (entier) qui ne notifie qu'au changement.
+    @ObservationIgnored var speedKmh: Double = 0 {
+        didSet {
+            let rounded = Int(speedKmh.rounded())
+            if rounded != displaySpeed { displaySpeed = rounded }
+        }
+    }
+    private(set) var displaySpeed = 0
     var gear: Gear = .park
     var speedLimitKmh: Int? = nil
     var rpm: Double? = nil            // nil tant qu'aucune source OBD
     var fuelLevel: Double? = nil      // 0...1, nil tant qu'aucune source
 
-    // Dynamique (repère voiture) — alimente l'animation de caisse
-    var longitudinalG: Double = 0     // + = accélération
-    var lateralG: Double = 0          // + = virage à gauche
-    var yawRateDegS: Double = 0       // + = vers la gauche
-    var roadPitchDeg: Double = 0      // + = montée
+    // Dynamique (repère voiture) — lue à chaque image par la scène 3D, jamais par SwiftUI
+    // directement (50 Hz) : non observée.
+    @ObservationIgnored var longitudinalG: Double = 0     // + = accélération
+    @ObservationIgnored var lateralG: Double = 0          // + = virage à gauche
+    @ObservationIgnored var yawRateDegS: Double = 0       // + = vers la gauche
+    @ObservationIgnored var roadPitchDeg: Double = 0      // + = montée
 
     // Carrosserie / éclairage
     var blinkerLeft = false
@@ -61,6 +69,11 @@ final class VehicleState {
     var tripMaxSpeedKmh: Double = 0
 
     var isMoving: Bool { speedKmh > 1 }
+
+    /// Affecte seulement si la valeur change (évite des rendus SwiftUI inutiles).
+    func set<T: Equatable>(_ keyPath: ReferenceWritableKeyPath<VehicleState, T>, _ value: T) {
+        if self[keyPath: keyPath] != value { self[keyPath: keyPath] = value }
+    }
     var tripAverageKmh: Double { tripSeconds > 0 ? tripDistanceKm / (tripSeconds / 3600) : 0 }
 
     /// Intègre la distance parcourue (appelé à 1 Hz).

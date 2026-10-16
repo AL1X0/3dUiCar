@@ -54,6 +54,7 @@ final class SensorHub: NSObject {
     func start() {
         guard !running else { return }
         running = true
+        Log.info(.sensors, "Capteurs démarrés (calibration : \(calibration))")
 
         guard motion.isDeviceMotionAvailable else { return }
         motion.deviceMotionUpdateInterval = 1.0 / 50
@@ -67,6 +68,7 @@ final class SensorHub: NSObject {
         guard running else { return }
         running = false
         motion.stopDeviceMotionUpdates()
+        Log.info(.sensors, "Capteurs arrêtés")
     }
 
     /// La position (carte, navigation) tourne en permanence, mode démo compris.
@@ -88,6 +90,7 @@ final class SensorHub: NSObject {
         forwardSampleCount = 0
         calibration = .level
         saveCalibration()
+        Log.info(.sensors, "Niveau calibré · haut = \(up)")
     }
 
     func resetCalibration() {
@@ -118,6 +121,7 @@ final class SensorHub: NSObject {
             left = simd_cross(up, forward)
             calibration = .complete
             saveCalibration()
+            Log.info(.sensors, "Axe avant appris · \(forward)")
         }
     }
 
@@ -143,7 +147,7 @@ final class SensorHub: NSObject {
         vehicle.yawRateDegS = yaw
         vehicle.roadPitchDeg = max(-15, min(15, pitch))
         if !vehicle.obdConnected {
-            vehicle.braking = longG < -0.15 && vehicle.speedKmh > 3
+            vehicle.set(\.braking, longG < -0.15 && vehicle.speedKmh > 3)
         }
         if !hasGPS {
             estimateSpeedWithoutGPS()
@@ -154,7 +158,7 @@ final class SensorHub: NSObject {
     /// Sans GPS : vitesse inconnue ; on reste à 0 (la caisse bouge quand même).
     private func estimateSpeedWithoutGPS() {
         if let last = lastGPSFix, Date().timeIntervalSince(last) < 3 { return }
-        vehicle.speedSource = .none
+        vehicle.set(\.speedSource, .none)
     }
 
     /// Sans OBD : D dès que la voiture roule, P après 10 s d'arrêt.
@@ -162,7 +166,7 @@ final class SensorHub: NSObject {
         guard !vehicle.obdConnected else { return }
         if vehicle.speedKmh > 3 {
             stoppedSince = nil
-            vehicle.gear = .drive
+            vehicle.set(\.gear, .drive)
         } else if vehicle.gear == .drive {
             if stoppedSince == nil { stoppedSince = Date() }
             if let s = stoppedSince, Date().timeIntervalSince(s) > 10 { vehicle.gear = .park }
@@ -193,16 +197,19 @@ extension SensorHub: CLLocationManagerDelegate {
             self.feed.updateFromDevice(loc)
             // L'iPhone compagnon (vrai GPS) a la priorité sur l'iPad
             guard self.running, self.feed.source == .device else { return }
-            self.vehicle.locationSource = .device
+            self.vehicle.set(\.locationSource, .device)
             // Vitesse valide uniquement avec un vrai fix GNSS (iPad Cellular / GPS externe)
             if speed >= 0, speedAccuracy >= 0, accuracy < 50 {
+                if !self.hasGPS { Log.info(.gps, "Fix GNSS iPad (précision \(Int(accuracy)) m)") }
                 self.hasGPS = true
                 self.lastGPSFix = Date()
                 self.vehicle.speedKmh = speed * 3.6
-                self.vehicle.speedSource = .device
+                self.vehicle.set(\.speedSource, .device)
             }
         }
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Log.warning(.gps, "Localisation iPad : \(error.localizedDescription)")
+    }
 }

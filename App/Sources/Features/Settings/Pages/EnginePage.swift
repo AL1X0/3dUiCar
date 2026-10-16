@@ -48,7 +48,7 @@ struct EnginePage: View {
 
                 gaugeCard(
                     title: "Vitesse",
-                    value: "\(Int(vehicle.speedKmh))",
+                    value: "\(vehicle.displaySpeed)",
                     unit: "km/h"
                 )
 

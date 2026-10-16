@@ -157,6 +157,28 @@ hinge("Door_FR", lambda a, b: mathutils.Vector((a.x, (a.y + b.y) / 2, b.z)))
 hinge("Hood", lambda a, b: mathutils.Vector((0, b.y, a.z)))
 hinge("Trunk", lambda a, b: mathutils.Vector((0, b.y, b.z)))
 
+# 4 bis. Fusion des maillages par (groupe, matériau) : beaucoup moins d'appels de dessin.
+def join_by_material(parent):
+    kids = [o for o in parent.children if o.type == "MESH"]
+    buckets = {}
+    for o in kids:
+        mat = o.material_slots[0].material.name if o.material_slots and o.material_slots[0].material else "none"
+        buckets.setdefault(mat, []).append(o)
+    for mat, objs in buckets.items():
+        if len(objs) > 1:
+            bpy.ops.object.select_all(action="DESELECT")
+            for o in objs:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = objs[0]
+            bpy.ops.object.join()
+        objs[0].name = f"{parent.name}_{mat}"
+        objs[0].data.name = objs[0].name
+
+
+for e in [o for o in bpy.data.objects if o.type == "EMPTY"]:
+    join_by_material(e)
+print("MESHES after join =", sum(1 for o in bpy.data.objects if o.type == "MESH"))
+
 # 5. Matériaux : peinture blanche, verres translucides, textures 1K
 for img in bpy.data.images:
     if max(img.size) > MAX_TEX:

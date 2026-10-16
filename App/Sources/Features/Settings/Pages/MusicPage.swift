@@ -20,7 +20,7 @@ struct MusicPage: View {
                     .foregroundStyle(palette.textPrimary)
                 Spacer()
                 AccentButton(
-                    title: spotify.isConnected ? "Bibliothèque" : "Connecter",
+                    title: spotify.isConnected ? "Bibliothèque" : "Se connecter",
                     systemImage: "music.note",
                     width: 200
                 ) {
@@ -34,8 +34,18 @@ struct MusicPage: View {
             }
 
             if spotify.isConnected {
+                InfoRow(label: "Appareil", value: spotify.deviceName ?? "Aucun actif")
                 InfoRow(label: "En cours", value: spotify.title)
                 InfoRow(label: "Artiste", value: spotify.artist)
+
+                AccentButton(
+                    title: "Se déconnecter",
+                    systemImage: "rectangle.portrait.and.arrow.right",
+                    isOn: false,
+                    width: 220
+                ) {
+                    spotify.logout()
+                }
             }
 
             ToggleRow(
@@ -53,7 +63,7 @@ struct MusicPage: View {
 
             SettingsSearchField(text: $sp.clientID, placeholder: "Client ID Spotify")
 
-            Text("Le Client ID est déjà intégré à l'app. Dans le tableau de bord developer.spotify.com, ajoute la redirect URI car3dui://spotify-login-callback. L'app Spotify doit être installée sur l'iPad ; la connexion se renouvelle via Spotify toutes les heures.")
+            Text("Connexion sécurisée Spotify (une seule fois) : le jeton se renouvelle automatiquement. La lecture se fait dans l'app Spotify de l'iPad ou sur n'importe quel appareil Spotify Connect ; Spotify Premium est nécessaire pour piloter la lecture. Redirect URI à déclarer : car3dui://spotify-login-callback.")
                 .font(TeslaFont.ui(13))
                 .foregroundStyle(palette.textSecondary)
 

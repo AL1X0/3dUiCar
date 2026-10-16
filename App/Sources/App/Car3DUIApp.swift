@@ -14,6 +14,7 @@ struct Car3DUIApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        Log.startSession()
         TeslaFont.registerFonts()
         let v = VehicleState()
         let f = LocationFeed()
@@ -41,15 +42,19 @@ struct Car3DUIApp: App {
                 }
                 .onAppear {
                     nav.settings = settings
+                    feed.restartListener = { companion.restart() }
                     sensors.startLocation()
                     companion.start()
                     esp32.start()
                 }
         }
         .onChange(of: scenePhase) {
+            Log.info(.app, "Phase : \(scenePhase)")
             switch scenePhase {
             case .active: spotify.connect()
-            case .background: spotify.disconnect()
+            case .background:
+                spotify.disconnect()
+                Log.markCleanExit()
             default: break
             }
         }

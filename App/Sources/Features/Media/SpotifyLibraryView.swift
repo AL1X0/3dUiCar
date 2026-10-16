@@ -24,8 +24,6 @@ struct SpotifyLibraryView: View {
     }
 
     var body: some View {
-        // Enregistre la dépendance à imageVersion pour rafraîchir les vignettes en cache
-        let _ = spotify.imageVersion
 
         VStack(spacing: 0) {
             GrabHandle()
@@ -232,7 +230,7 @@ struct SpotifyLibraryView: View {
                         .foregroundStyle(palette.textSecondary)
 
                     AccentButton(title: "Recharger", isOn: true, width: 200) {
-                        spotify.loadLibrary()
+                        Task { await spotify.loadLibrary() }
                     }
                 }
                 Spacer()
@@ -260,11 +258,7 @@ struct SpotifyLibraryView: View {
 
     private func tileView(for item: SpotifyItem) -> some View {
         Button {
-            if item.isContainer && !item.isPlayable {
-                spotify.loadChildren(of: item.id)
-            } else {
-                spotify.play(item)
-            }
+            spotify.play(item)
         } label: {
             VStack(alignment: .leading, spacing: 8) {
                 itemArtwork(for: item, size: 150, cornerRadius: 6)
@@ -293,22 +287,38 @@ struct SpotifyLibraryView: View {
     // MARK: - Vignettes / Artwork
 
     private func itemArtwork(for item: SpotifyItem, size: CGFloat, cornerRadius: CGFloat) -> some View {
+        SpotifyThumb(url: item.imageURL, size: size, cornerRadius: cornerRadius,
+                     placeholder: item.isContainer ? "square.stack.fill" : "music.note")
+    }
+}
+
+/// Vignette chargée de façon indépendante (seule elle se redessine quand l'image arrive).
+struct SpotifyThumb: View {
+    let url: URL?
+    let size: CGFloat
+    let cornerRadius: CGFloat
+    let placeholder: String
+    @Environment(SpotifyController.self) private var spotify
+    @Environment(\.palette) private var palette
+    @State private var image: UIImage?
+
+    var body: some View {
         Group {
-            if let image = spotify.image(for: item), image.size.width > 0 {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
             } else {
-                Rectangle()
-                    .fill(palette.panelSecondary)
-                    .overlay {
-                        Image(systemName: item.isContainer ? "folder.fill" : "music.note")
-                            .font(.system(size: size * 0.35))
-                            .foregroundStyle(palette.inactive)
-                    }
+                Rectangle().fill(palette.panelSecondary).overlay {
+                    Image(systemName: placeholder)
+                        .font(.system(size: size * 0.35))
+                        .foregroundStyle(palette.inactive)
+                }
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .task(id: url) {
+            guard let url else { return }
+            image = await spotify.image(url: url)
+        }
     }
 }

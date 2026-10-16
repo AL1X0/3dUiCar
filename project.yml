@@ -10,16 +10,11 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.5.0"
+    MARKETING_VERSION: "0.6.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
     CODE_SIGN_IDENTITY: ""
-
-packages:
-  SpotifyiOS:
-    url: https://github.com/spotify/ios-sdk
-    from: 5.0.1
 
 targets:
   Car3DUI:
@@ -28,8 +23,6 @@ targets:
     sources:
       - path: App/Sources
       - path: App/Resources
-    dependencies:
-      - package: SpotifyiOS
     scheme: {}
     # Clés non couvertes par GENERATE_INFOPLIST_FILE (fusionnées avec les INFOPLIST_KEY_*)
     info:
@@ -37,6 +30,8 @@ targets:
       properties:
         SpotifyClientID: $(SPOTIFY_CLIENT_ID)
         LSApplicationQueriesSchemes: [spotify]
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
         NSBonjourServices: [_car3dui._udp]
         CFBundleURLTypes:
           - CFBundleURLName: com.al1x0.car3dui
@@ -70,12 +65,15 @@ targets:
     sources:
       - path: Companion/Sources
       - path: Companion/Resources
+      - path: App/Sources/Core/AppLog.swift
     scheme: {}
     info:
       path: Companion/Info.plist
       properties:
         NSBonjourServices: [_car3dui._udp]
         UIBackgroundModes: [location]
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
     settings:
       base:
         # Identifiant FIXE (mises à jour SideStore)

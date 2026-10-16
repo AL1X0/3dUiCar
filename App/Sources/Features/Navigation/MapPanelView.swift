@@ -34,7 +34,7 @@ struct MapPanelView: View {
                 .annotationTitles(.hidden)
             }
         }
-        .mapStyle(.standard(elevation: .realistic, emphasis: .muted, pointsOfInterest: .excludingAll))
+        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
         .mapControls { MapCompass() }
         .onMapCameraChange(frequency: .onEnd) { _ in
             if position.positionedByUser { following = false }
