@@ -34,11 +34,16 @@ GitHub Actions compile l'`.ipa` **non signé** (SideStore le signe avec ton Appl
 | `Tools/sidestore` | Mise à jour de la source SideStore |
 | `sidestore/source.json` | Source SideStore |
 
-Régénérer le modèle 3D :
+Régénérer le modèle 3D (Blender 5 + `pip install usd-core`) :
 
 ```bash
-blender -b --python Tools/model/build_car.py -- Tools/model/2019_ford_fiesta_st.glb App/Resources/Car.usdz 75000
+blender -b --python Tools/model/build_car.py -- Tools/model/2019_ford_fiesta_st.glb build/car
+python Tools/model/package_usdz.py build/car/Car.usdc App/Resources/Car.usdz
 ```
+
+## Spotify
+
+Le lecteur pilote l'app Spotify via le SDK App Remote. Crée une app sur [developer.spotify.com](https://developer.spotify.com/dashboard) avec la redirect URI `car3dui://spotify-login-callback`, puis colle son Client ID dans Réglages › Logiciel (ou définis la variable de dépôt `SPOTIFY_CLIENT_ID` pour l'intégrer au build).
 
 ## Crédits
 

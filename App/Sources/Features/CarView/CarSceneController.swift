@@ -15,7 +15,7 @@ final class CarSceneController {
     private let anchor = AnchorEntity(world: .zero)
     private let camera = PerspectiveCamera()
     private let carRoot = Entity()      // tangage route
-    private let sprung = Entity()       // masse suspendue : roulis / tangage dynamique
+    private var sprung: Entity?         // nœud « Sprung » du modèle : roulis / tangage dynamique
     private var ground: ModelEntity?
     private var laneLeft: [ModelEntity] = []
     private var laneRight: [ModelEntity] = []
@@ -67,8 +67,6 @@ final class CarSceneController {
         camera.camera.fieldOfViewInDegrees = 38
         anchor.addChild(camera)
         anchor.addChild(carRoot)
-        sprung.position = [0, 0.5, 0]   // centre de gravité approximatif
-        carRoot.addChild(sprung)
 
         setupLights()
         setupGround()
@@ -87,19 +85,17 @@ final class CarSceneController {
         do {
             let car = try await Entity(named: "Car", in: .main)
             carRoot.addChild(car)
-            // Chaque pièce animée est placée sous un pivot aligné sur le repère voiture :
-            // l'orientation d'origine des nœuds USD (conversion d'axes) est conservée.
+            // Le modèle porte déjà sa hiérarchie finale avec des pivots sans rotation
+            // (Tools/model/build_car.py) : on oriente ces nœuds directement.
             for w in ["FL", "FR", "RL", "RR"] {
-                let st = pivot(for: car.findEntity(named: "Wheel_\(w)_Steer"), under: carRoot)
-                steer[w] = st
-                if let st { spin[w] = pivot(for: car.findEntity(named: "Wheel_\(w)_Spin"), under: st) }
+                steer[w] = car.findEntity(named: "Wheel_\(w)_Steer")
+                spin[w] = car.findEntity(named: "Wheel_\(w)_Spin")
             }
-            // Les éléments suspendus passent sous `sprung` (les roues restent au sol)
-            car.findEntity(named: "Body")?.setParent(sprung, preservingWorldTransform: true)
-            doorFL = pivot(for: car.findEntity(named: "Door_FL"), under: sprung)
-            doorFR = pivot(for: car.findEntity(named: "Door_FR"), under: sprung)
-            hood = pivot(for: car.findEntity(named: "Hood"), under: sprung)
-            trunk = pivot(for: car.findEntity(named: "Trunk"), under: sprung)
+            sprung = car.findEntity(named: "Sprung")
+            doorFL = car.findEntity(named: "Door_FL")
+            doorFR = car.findEntity(named: "Door_FR")
+            hood = car.findEntity(named: "Hood")
+            trunk = car.findEntity(named: "Trunk")
             carModels = Self.models(in: car)
             brakeLightModels = carModels.filter { $0.name.lowercased().contains("red_glass") }
             applyFinish()
@@ -107,17 +103,6 @@ final class CarSceneController {
         } catch {
             print("Car.usdz introuvable : \(error)")
         }
-    }
-
-    /// Insère un pivot sans rotation à l'origine de `e` (charnière / centre de roue).
-    private func pivot(for e: Entity?, under parent: Entity) -> Entity? {
-        guard let e else { return nil }
-        let p = Entity()
-        p.name = e.name + "_Pivot"
-        parent.addChild(p)
-        p.position = e.position(relativeTo: parent)
-        e.setParent(p, preservingWorldTransform: true)
-        return p
     }
 
     private func setupLights() {
@@ -191,9 +176,14 @@ final class CarSceneController {
         for (pos, left) in [([x, 0.72, zf], true), ([-x, 0.72, zf], false),
                             ([x, 0.85, zr], true), ([-x, 0.85, zr], false)] as [(SIMD3<Float>, Bool)] {
             let e = ModelEntity(mesh: mesh, materials: [mat])
-            e.position = pos - sprung.position
             e.isEnabled = false
-            sprung.addChild(e)
+            if let sprung {
+                sprung.addChild(e)
+                e.setPosition(pos, relativeTo: carRoot)
+            } else {
+                carRoot.addChild(e)
+                e.position = pos
+            }
             blinkers.append((e, left))
         }
     }
@@ -217,7 +207,7 @@ final class CarSceneController {
         roll.target = Float(v.lateralG) * 3 * .pi / 180
         pitch.target = -Float(v.longitudinalG) * 2 * .pi / 180
         roll.step(dt); pitch.step(dt)
-        sprung.orientation = simd_quatf(angle: roll.value, axis: [0, 0, 1])
+        sprung?.orientation = simd_quatf(angle: roll.value, axis: [0, 0, 1])
             * simd_quatf(angle: pitch.value, axis: [1, 0, 0])
         carRoot.orientation = slerpTo(carRoot.orientation,
                                       simd_quatf(angle: -Float(v.roadPitchDeg) * .pi / 180, axis: [1, 0, 0]), dt * 2)

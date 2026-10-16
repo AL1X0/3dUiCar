@@ -43,7 +43,7 @@ jobs:
       - name: Build (unsigned)
         run: |
           status=0
-          xcodebuild             -project Car3DUI.xcodeproj             -target Car3DUI             -configuration Release             -sdk iphoneos             SYMROOT="$PWD/build"             MARKETING_VERSION="${{ steps.ver.outputs.version }}"             CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}"             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""             build > build.log 2>&1 || status=$?
+          xcodebuild             -project Car3DUI.xcodeproj -scheme Car3DUI -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build -clonedSourcePackagesDirPath spm             SPOTIFY_CLIENT_ID="${{ vars.SPOTIFY_CLIENT_ID }}"             MARKETING_VERSION="${{ steps.ver.outputs.version }}"             CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}"             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""             build > build.log 2>&1 || status=$?
           grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log || true
           if [ $status -ne 0 ] || ! grep -q "BUILD SUCCEEDED" build.log; then
             tail -60 build.log
@@ -53,7 +53,7 @@ jobs:
       - name: Package .ipa
         run: |
           mkdir -p Payload
-          cp -R build/Release-iphoneos/Car3DUI.app Payload/
+          cp -R build/Build/Products/Release-iphoneos/Car3DUI.app Payload/
           zip -qry Car3DUI.ipa Payload
           ls -lh Car3DUI.ipa
 

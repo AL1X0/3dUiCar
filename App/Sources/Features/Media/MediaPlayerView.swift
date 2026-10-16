@@ -1,155 +1,8 @@
 import SwiftUI
-import MediaPlayer
-import Observation
 
-/// Contrôleur gérant la lecture musicale via le lecteur système Apple Music.
-@MainActor
-@Observable
-final class MusicController {
-    var title: String = "Aucune lecture"
-    var artist: String = "Apple Music"
-    var artwork: UIImage? = nil
-    var isPlaying: Bool = false
-    var progress: Double = 0.0
-    var duration: TimeInterval = 0.0
-    var currentTime: TimeInterval = 0.0
-    var recents: [UIImage] = []
-
-    private let player = MPMusicPlayerController.systemMusicPlayer
-    private var timer: Timer?
-    private var notificationTokens: [NSObjectProtocol] = []
-    private var hasLoadedRecents = false
-
-    init() {
-        setupNotifications()
-        updateState()
-        startTimer()
-    }
-
-    func togglePlay() {
-        if player.playbackState == .playing {
-            player.pause()
-        } else {
-            player.play()
-        }
-        updateState()
-    }
-
-    func next() {
-        player.skipToNextItem()
-        updateState()
-    }
-
-    func previous() {
-        player.skipToPreviousItem()
-        updateState()
-    }
-
-    func requestAccess() {
-        let status = MPMediaLibrary.authorizationStatus()
-        switch status {
-        case .authorized:
-            loadRecents()
-            updateState()
-        case .notDetermined:
-            MPMediaLibrary.requestAuthorization { newStatus in
-                Task { @MainActor in
-                    if newStatus == .authorized {
-                        self.loadRecents()
-                        self.updateState()
-                    }
-                }
-            }
-        default:
-            break
-        }
-    }
-
-    private func setupNotifications() {
-        player.beginGeneratingPlaybackNotifications()
-        let nc = NotificationCenter.default
-
-        let itemToken = nc.addObserver(
-            forName: .MPMusicPlayerControllerNowPlayingItemDidChange,
-            object: player,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updateState() }
-        }
-
-        let stateToken = nc.addObserver(
-            forName: .MPMusicPlayerControllerPlaybackStateDidChange,
-            object: player,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updateState() }
-        }
-
-        notificationTokens = [itemToken, stateToken]
-    }
-
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.updateProgress()
-            }
-        }
-    }
-
-    private func updateProgress() {
-        let time = player.currentPlaybackTime
-        currentTime = time.isNaN ? 0 : max(0, time)
-
-        let total = duration > 0 ? duration : (player.nowPlayingItem?.playbackDuration ?? 0)
-        duration = total.isNaN ? 0 : max(0, total)
-
-        if duration > 0 {
-            progress = min(max(currentTime / duration, 0.0), 1.0)
-        } else {
-            progress = 0.0
-        }
-    }
-
-    private func updateState() {
-        isPlaying = player.playbackState == .playing
-
-        if let item = player.nowPlayingItem {
-            title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? (item.title ?? "Titre inconnu") : "Titre inconnu"
-            artist = item.artist ?? "Artiste inconnu"
-            artwork = item.artwork?.image(at: CGSize(width: 300, height: 300))
-            duration = item.playbackDuration.isNaN ? 0 : item.playbackDuration
-            updateProgress()
-        } else {
-            title = "Aucune lecture"
-            artist = "Apple Music"
-            artwork = nil
-            duration = 0
-            currentTime = 0
-            progress = 0
-        }
-    }
-
-    private func loadRecents() {
-        guard !hasLoadedRecents, MPMediaLibrary.authorizationStatus() == .authorized else { return }
-        hasLoadedRecents = true
-
-        let query = MPMediaQuery.albums()
-        guard let collections = query.collections else { return }
-
-        var loadedArtworks: [UIImage] = []
-        for album in collections.prefix(8) {
-            if let repItem = album.representativeItem,
-               let art = repItem.artwork?.image(at: CGSize(width: 300, height: 300)) {
-                loadedArtworks.append(art)
-            }
-        }
-        self.recents = loadedArtworks
-    }
-}
-
-/// Carte du lecteur multimédia intégrée au volet gauche.
+/// Carte du lecteur Spotify intégrée au volet gauche (composant « Music » du Figma).
 struct MediaPlayerView: View {
-    @State private var controller = MusicController()
+    @Environment(SpotifyController.self) private var controller
     @State private var expanded = false
     @Environment(\.palette) private var palette
 
@@ -197,10 +50,16 @@ struct MediaPlayerView: View {
                         .foregroundStyle(palette.textSecondary)
                         .lineLimit(1)
 
-                    Label("Apple Music", systemImage: "dot.radiowaves.left.and.right")
-                        .font(TeslaFont.ui(12))
-                        .foregroundStyle(palette.textSecondary)
+                    HStack(spacing: 5) {
+                        Image("app.spotify").resizable().frame(width: 14, height: 14)
+                        Text(controller.isConnected ? "Spotify" : (controller.lastError ?? "Spotify · non connecté"))
+                            .lineLimit(1)
+                    }
+                    .font(TeslaFont.ui(12))
+                    .foregroundStyle(palette.textSecondary)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { if !controller.isConnected { controller.authorize() } }
 
                 Spacer()
 
@@ -367,7 +226,7 @@ struct MediaPlayerView: View {
                 }
         )
         .task {
-            controller.requestAccess()
+            controller.connect()
         }
     }
 

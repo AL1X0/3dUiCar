@@ -7,3 +7,5 @@ Payload/
 .DS_Store
 __pycache__/
 *.blend1
+App/Info.plist
+spm/

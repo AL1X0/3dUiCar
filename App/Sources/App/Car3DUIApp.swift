@@ -2,16 +2,34 @@ import SwiftUI
 
 @main
 struct Car3DUIApp: App {
-    @State private var vehicle = VehicleState()
+    @State private var vehicle: VehicleState
+    @State private var sensors: SensorHub
     @State private var settings = AppSettings()
+    @State private var spotify = SpotifyController()
+    @Environment(\.scenePhase) private var scenePhase
 
-    init() { TeslaFont.registerFonts() }
+    init() {
+        TeslaFont.registerFonts()
+        let v = VehicleState()
+        _vehicle = State(initialValue: v)
+        _sensors = State(initialValue: SensorHub(vehicle: v))
+    }
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(vehicle)
                 .environment(settings)
+                .environment(spotify)
+                .environment(sensors)
+                .onOpenURL { spotify.handle(url: $0) }
+        }
+        .onChange(of: scenePhase) {
+            switch scenePhase {
+            case .active: spotify.connect()
+            case .background: spotify.disconnect()
+            default: break
+            }
         }
     }
 }
@@ -20,6 +38,8 @@ struct Car3DUIApp: App {
 struct RootView: View {
     @Environment(VehicleState.self) private var vehicle
     @Environment(AppSettings.self) private var settings
+    @Environment(SpotifyController.self) private var spotify
+    @Environment(SensorHub.self) private var sensors
     @Environment(\.colorScheme) private var systemScheme
     @State private var simulator: SimulatorSource?
     private let tripTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -49,7 +69,7 @@ struct RootView: View {
                         }
                         .clipped()
                 }
-                DockView(onCarTap: toggleSettings, onApp: { _ in })
+                DockView(onCarTap: toggleSettings, onApp: openApp)
                     .frame(height: Theme.dockHeight)
             }
         }
@@ -80,10 +100,39 @@ struct RootView: View {
         }
     }
 
+    private func openApp(_ app: DockApp) {
+        switch app {
+        case .music, .audio:
+            if spotify.isConnected {
+                UIApplication.shared.open(URL(string: "spotify:")!)
+            } else {
+                spotify.authorize()
+            }
+        case .phone:
+            UIApplication.shared.open(URL(string: "tel:")!)
+        default:
+            break
+        }
+    }
+
+    /// Mode démo = trajet simulé ; sinon capteurs réels de l'iPad (gyroscope, GPS).
     private func applyDemoMode() {
         if simulator == nil { simulator = SimulatorSource(vehicle: vehicle) }
         guard let simulator else { return }
-        if settings.demoMode { simulator.start() } else { simulator.stop() }
+        if settings.demoMode {
+            sensors.stop()
+            simulator.start()
+        } else {
+            simulator.stop()
+            vehicle.speedKmh = 0
+            vehicle.gear = .park
+            vehicle.blinkerLeft = false
+            vehicle.blinkerRight = false
+            vehicle.braking = false
+            vehicle.speedLimitKmh = nil
+            vehicle.rpm = nil
+            sensors.start()
+        }
     }
 
     private func applyBrightness() {

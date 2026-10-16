@@ -1,70 +1,93 @@
-"""Simplifie le GLB Sketchfab et exporte Car.usdz pour RealityKit.
+"""Prépare Car.usdz pour RealityKit à partir du GLB Sketchfab.
 
-Usage : blender -b --python Tools/model/build_car.py -- <in.glb> <out.usdz> [target_tris]
+Usage : blender -b --python Tools/model/build_car.py -- <in.glb> <out_dir>
+Puis : python Tools/model/package_usdz.py <out_dir>/Car.usdc App/Resources/Car.usdz
 
-Repère de sortie (USD, Y-up, mètres) : origine au sol au centre de la voiture,
-avant = +Z, gauche = +X. Pivots animables :
-  Wheel_FL_Steer/Wheel_FL_Spin, Wheel_FR_Steer/Wheel_FR_Spin,
-  Wheel_RL_Steer/Wheel_RL_Spin, Wheel_RR_Steer/Wheel_RR_Spin,
-  Door_FL, Door_FR, Hood, Trunk, Body
+Sortie (USD, Y-up, mètres, AUCUNE rotation sur les nœuds) : origine au sol au centre,
+avant = +Z, gauche = +X. Hiérarchie :
+  Car
+  ├─ Sprung (masse suspendue, pivot au centre de gravité)
+  │   ├─ Body
+  │   ├─ Door_FL, Door_FR   (pivot = charnière avant)
+  │   ├─ Hood                (pivot = bord arrière haut)
+  │   └─ Trunk               (pivot = bord avant haut)
+  └─ Wheel_{FL,FR,RL,RR}_Steer (pivot = centre roue) └─ Wheel_*_Spin
+Carrosserie en pleine résolution ; seul l'intérieur et le moteur sont décimés.
+Peinture carrosserie : blanc nacré.
 """
-import sys, bpy, bmesh, mathutils
+import os
+import sys
+
+import bpy
+import mathutils
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-SRC, DST = argv[0], argv[1]
-TARGET = int(argv[2]) if len(argv) > 2 else 100_000
+SRC, OUT = argv[0], argv[1]
 MAX_TEX = 1024
+INTERIOR_RATIO = 0.2
+PAINT = "FiestaMI_1080040001_004"
+INTERIOR = ("Cabin", "Engine", "Dashboard")
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=SRC)
 
 meshes = [o for o in bpy.data.objects if o.type == "MESH"]
-for o in meshes:  # données partagées -> uniques avant de cuire les transforms
+for o in meshes:
     if o.data.users > 1:
         o.data = o.data.copy()
 
-# 1. Cuire les transforms monde (x100 : le modèle est en 1/100 m), supprimer les empties
-S = mathutils.Matrix.Scale(100.0, 4)
+# 1. Cuire transforms monde, x100 (modèle en 1/100 m) et passage Z-up -> Y-up :
+#    (x, y, z)_blender -> (x, z, -y)  => avant (-Y blender) devient +Z, haut devient +Y.
+TO_YUP = mathutils.Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))
+S = TO_YUP @ mathutils.Matrix.Scale(100.0, 4)
 for o in meshes:
     mw = S @ o.matrix_world
     o.parent = None
     o.data.transform(mw)
+    if mw.determinant() < 0:
+        o.data.flip_normals()
     o.matrix_world = mathutils.Matrix.Identity(4)
 for o in [o for o in bpy.data.objects if o.type != "MESH"]:
     bpy.data.objects.remove(o)
 
-# 2. Recentrer : sol à z=0, centre en x/y
+
 def bounds(objs):
     vs = [v.co for o in objs for v in o.data.vertices]
     mn = mathutils.Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
     mx = mathutils.Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
     return mn, mx
 
+
+# 2. Recentrer : sol y=0, centre x/z
 mn, mx = bounds(meshes)
-off = mathutils.Vector((-(mn.x + mx.x) / 2, -(mn.y + mx.y) / 2, -mn.z))
+off = mathutils.Vector((-(mn.x + mx.x) / 2, -mn.y, -(mn.z + mx.z) / 2))
 for o in meshes:
     o.data.transform(mathutils.Matrix.Translation(off))
 mn, mx = bounds(meshes)
-print(f"CAR SIZE (m) w={mx.x-mn.x:.3f} l={mx.y-mn.y:.3f} h={mx.z-mn.z:.3f}")
+print(f"CAR SIZE (m) w={mx.x-mn.x:.3f} h={mx.y-mn.y:.3f} l={mx.z-mn.z:.3f}")
 
-# 3. Décimation proportionnelle
+
 def tris(o):
     return sum(len(p.vertices) - 2 for p in o.data.polygons)
-total = sum(tris(o) for o in meshes)
-ratio = min(1.0, TARGET / total)
-print(f"TRIS before={total} ratio={ratio:.3f}")
+
+
+def is_interior(o):
+    return any(s.material and any(k in s.material.name for k in INTERIOR) for s in o.material_slots)
+
+
+# 3. Décimation de l'intérieur / moteur uniquement
+print(f"TRIS before={sum(tris(o) for o in meshes)}")
 for o in meshes:
-    if tris(o) > 1500 and ratio < 1.0:
+    if is_interior(o) and tris(o) > 500:
         m = o.modifiers.new("dec", "DECIMATE")
-        m.ratio = ratio
-        m.use_collapse_triangulate = True
+        m.ratio = INTERIOR_RATIO
         bpy.context.view_layer.objects.active = o
         bpy.ops.object.modifier_apply(modifier=m.name)
 print(f"TRIS after={sum(tris(o) for o in meshes)}")
 
-# 4. Classement en groupes animables (Blender : avant = -Y, gauche = +X)
-def group_of(name):
-    n = name
+
+# 4. Groupes (repère Y-up : gauche = +X, avant = +Z)
+def group_of(n):
     if "Ani_Wheel_FL" in n: return "Wheel_FL_Spin"
     if "Ani_Disc_Scale_FR" in n: return "Wheel_FR_Spin"
     if "Ani_Wheel_BL" in n: return "Wheel_RL_Spin"
@@ -78,84 +101,101 @@ def group_of(name):
     if "SK_Trunk" in n: return "Trunk"
     return "Body"
 
+
 groups = {}
 for o in meshes:
     groups.setdefault(group_of(o.name), []).append(o)
 
-def empty(name, loc, parent=None):
+
+def node(name, world_pos, parent=None):
+    """Empty sans rotation à une position monde ; parent_inverse = identité."""
     e = bpy.data.objects.new(name, None)
     bpy.context.scene.collection.objects.link(e)
-    if parent:
+    if parent is not None:
         e.parent = parent
-        e.matrix_parent_inverse = parent.matrix_world.inverted()
-    e.location = loc if parent is None else parent.matrix_world.inverted() @ loc
+        e.matrix_parent_inverse = mathutils.Matrix.Identity(4)
+    e.matrix_world = mathutils.Matrix.Translation(world_pos)
+    bpy.context.view_layer.update()
     return e
 
-root = empty("Car", mathutils.Vector())
 
 def attach(objs, parent):
     for o in objs:
-        mw = o.matrix_world.copy()
         o.parent = parent
-        o.matrix_parent_inverse = parent.matrix_world.inverted()
-        o.matrix_world = mw
+        o.matrix_parent_inverse = mathutils.Matrix.Identity(4)
+        o.matrix_world = mathutils.Matrix.Identity(4)  # la géométrie est déjà en monde
+    bpy.context.view_layer.update()
 
-attach(groups.get("Body", []), empty("Body", mathutils.Vector(), root))
 
-# Roues : pivot de braquage + pivot de rotation au centre de la roue
+car = node("Car", mathutils.Vector())
+sprung = node("Sprung", mathutils.Vector((0, 0.5, 0)), car)
+attach(groups.get("Body", []), node("Body", mathutils.Vector((0, 0.5, 0)), sprung))
+
 for w in ("FL", "FR", "RL", "RR"):
     spin = groups.get(f"Wheel_{w}_Spin", [])
     if not spin:
-        print("WARN missing wheel", w); continue
+        print("WARN missing wheel", w)
+        continue
     a, b = bounds(spin)
     c = (a + b) / 2
-    steer = empty(f"Wheel_{w}_Steer", c, root)
-    bpy.context.view_layer.update()
+    steer = node(f"Wheel_{w}_Steer", c, car)
     attach(groups.get(f"Wheel_{w}_Steer", []), steer)
-    sp = empty(f"Wheel_{w}_Spin", c, steer)
-    bpy.context.view_layer.update()
-    attach(spin, sp)
+    attach(spin, node(f"Wheel_{w}_Spin", c, steer))
+
 
 def hinge(name, pick):
     objs = groups.get(name, [])
     if not objs:
-        print("WARN missing", name); return
+        print("WARN missing", name)
+        return
     a, b = bounds(objs)
-    e = empty(name, pick(a, b), root)
-    bpy.context.view_layer.update()
-    attach(objs, e)
+    attach(objs, node(name, pick(a, b), sprung))
 
-# Portes : charnière bord avant, côté extérieur ; capot : bord arrière haut ; coffre : bord avant haut
-hinge("Door_FL", lambda a, b: mathutils.Vector((b.x, a.y, (a.z + b.z) / 2)))
-hinge("Door_FR", lambda a, b: mathutils.Vector((a.x, a.y, (a.z + b.z) / 2)))
-hinge("Hood", lambda a, b: mathutils.Vector((0, b.y, b.z)))
-hinge("Trunk", lambda a, b: mathutils.Vector((0, a.y, b.z)))
 
-# 5. Textures réduites, verres translucides
+hinge("Door_FL", lambda a, b: mathutils.Vector((b.x, (a.y + b.y) / 2, b.z)))
+hinge("Door_FR", lambda a, b: mathutils.Vector((a.x, (a.y + b.y) / 2, b.z)))
+hinge("Hood", lambda a, b: mathutils.Vector((0, b.y, a.z)))
+hinge("Trunk", lambda a, b: mathutils.Vector((0, b.y, b.z)))
+
+# 5. Matériaux : peinture blanche, verres translucides, textures 1K
 for img in bpy.data.images:
-    if img.size[0] > MAX_TEX or img.size[1] > MAX_TEX:
+    if max(img.size) > MAX_TEX:
         f = MAX_TEX / max(img.size)
         img.scale(max(1, int(img.size[0] * f)), max(1, int(img.size[1] * f)))
         img.pack()
+
 for mat in bpy.data.materials:
-    if not mat.use_nodes: continue
+    if not mat.use_nodes:
+        continue
     bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
-    if bsdf and "glass" in mat.name.lower():
-        bsdf.inputs["Alpha"].default_value = 0.6 if "red" in mat.name.lower() else 0.3
+    if bsdf is None:
+        continue
+    name = mat.name.lower()
+    if mat.name == PAINT:
+        for l in list(bsdf.inputs["Base Color"].links):
+            mat.node_tree.links.remove(l)
+        bsdf.inputs["Base Color"].default_value = (0.93, 0.93, 0.93, 1)
+        bsdf.inputs["Metallic"].default_value = 0.0
+        bsdf.inputs["Roughness"].default_value = 0.28
+        bsdf.inputs["Coat Weight"].default_value = 1.0
+        bsdf.inputs["Coat Roughness"].default_value = 0.05
+    elif "glass" in name:
+        alpha = 0.55 if "red" in name else (0.18 if "light" in name else 0.35)
         for l in list(bsdf.inputs["Alpha"].links):
             mat.node_tree.links.remove(l)
+        bsdf.inputs["Alpha"].default_value = alpha
         tr = bsdf.inputs.get("Transmission Weight")
-        if tr: tr.default_value = 0.0
+        if tr:
+            tr.default_value = 0.0
 
-# 6. Export USDZ (Y-up, avant Blender -Y -> USD +Z)
+# 6. Export USDC (sans conversion d'axes : la géométrie est déjà Y-up)
+os.makedirs(OUT, exist_ok=True)
 bpy.ops.wm.usd_export(
-    filepath=DST,
+    filepath=os.path.join(OUT, "Car.usdc"),
     export_materials=True,
     generate_preview_surface=True,
     export_textures_mode="NEW",
-    convert_orientation=True,
-    export_global_forward_selection="NEGATIVE_Z",
-    export_global_up_selection="Y",
+    convert_orientation=False,
     root_prim_path="",
 )
-print("EXPORTED", DST)
+print("EXPORTED", OUT)
