@@ -85,6 +85,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           SIZE=$(stat -f%z Car3DUI.ipa)
+          # checkout@v4 ne récupère pas l'annotation du tag : on la refetch pour les notes
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
           git fetch origin main
           git checkout main
           python3 Tools/sidestore/update_source.py \

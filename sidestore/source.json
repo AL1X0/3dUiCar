@@ -23,7 +23,7 @@
           "version": "0.1.0",
           "buildVersion": "3",
           "date": "2026-10-16T18:54:18Z",
-          "localizedDescription": "Plan : statut phase 0, fins de ligne LF\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+          "localizedDescription": "Phase 0 : voiture 3D animée (démo simulée), carte, dock, HUD.",
           "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.1.0/Car3DUI.ipa",
           "size": 6359383,
           "minOSVersion": "18.0"
