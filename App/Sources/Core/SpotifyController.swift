@@ -75,6 +75,11 @@ final class SpotifyController: NSObject {
     @ObservationIgnored private var imageCache = NSCache<NSURL, UIImage>()
     @ObservationIgnored private var lastPoll = Date.distantPast
     @ObservationIgnored private var consecutiveFailures = 0
+    @ObservationIgnored private var activeDeviceID: String?
+    @ObservationIgnored private var pendingPlay: (body: [String: Any]?, label: String)?
+    @ObservationIgnored private var likesCheckAvailable = true
+    @ObservationIgnored private var likedIDs: Set<String> = []
+    @ObservationIgnored private var lastLibraryLoad = Date.distantPast
 
     override init() {
         let bundled = Bundle.main.object(forInfoDictionaryKey: "SpotifyClientID") as? String ?? ""
@@ -98,7 +103,18 @@ final class SpotifyController: NSObject {
                 try? await Task.sleep(for: .seconds(delay))
             }
         }
-        Task { await loadLibrary() }
+        if Date().timeIntervalSince(lastLibraryLoad) > 600 || sections.isEmpty {
+            Task { await loadLibrary() }
+        }
+        if let pending = pendingPlay {
+            // Retour depuis l'app Spotify : elle est maintenant un appareil actif
+            pendingPlay = nil
+            Log.info(.spotify, "Reprise de la lecture en attente : \(pending.label)")
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                await startPlayback(pending.body, label: pending.label, allowOpenApp: false)
+            }
+        }
     }
 
     func disconnect() {
@@ -263,6 +279,7 @@ final class SpotifyController: NSObject {
         let (status, data) = await api("GET", "/me/player", query: ["additional_types": "episode"])
         lastPoll = Date()
         if status == 204 {
+            activeDeviceID = nil
             // Rien en cours sur aucun appareil
             if isPlaying { Log.info(.spotify, "Aucune lecture active") }
             isPlaying = false
@@ -276,7 +293,9 @@ final class SpotifyController: NSObject {
         shuffle = json["shuffle_state"] as? Bool ?? false
         repeatMode = Repeat(rawValue: json["repeat_state"] as? String ?? "off") ?? .off
         currentTime = Double(json["progress_ms"] as? Int ?? 0) / 1000
-        deviceName = (json["device"] as? [String: Any])?["name"] as? String
+        let device = json["device"] as? [String: Any]
+        deviceName = device?["name"] as? String
+        activeDeviceID = device?["id"] as? String
         let disallows = (json["actions"] as? [String: Any])?["disallows"] as? [String: Any]
         canSeek = !(disallows?["seeking"] as? Bool ?? false)
         guard let item = json["item"] as? [String: Any] else { return }
@@ -294,8 +313,16 @@ final class SpotifyController: NSObject {
                 artwork = await image(url: url)
             }
             if let id = item["id"] as? String {
-                let (_, d) = await api("GET", "/me/tracks/contains", query: ["ids": id])
-                isSaved = (d.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [Bool] })?.first ?? false
+                isSaved = likedIDs.contains(id)
+                if likesCheckAvailable {
+                    let (status, d) = await api("GET", "/me/tracks/contains", query: ["ids": id])
+                    if status == 403 {
+                        likesCheckAvailable = false
+                        Log.info(.spotify, "Vérification des favoris refusée par Spotify : déduite de « Titres likés »")
+                    } else if let v = (d.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [Bool] })?.first {
+                        isSaved = v
+                    }
+                }
             }
         }
     }
@@ -312,17 +339,30 @@ final class SpotifyController: NSObject {
 
     func togglePlay() {
         guard isConnected else { authorize(); return }
-        let wasPlaying = isPlaying
-        isPlaying.toggle()
-        Task {
-            let (status, _) = await api("PUT", wasPlaying ? "/me/player/pause" : "/me/player/play")
-            if status == 404 { await activateDevice(thenPlay: true) }
-            refreshSoon()
+        if isPlaying {
+            isPlaying = false
+            Task {
+                let (status, _) = await api("PUT", "/me/player/pause")
+                if status == 403 { Log.debug(.spotify, "Pause refusée (déjà en pause ?) : resynchronisation") }
+                refreshSoon()
+            }
+        } else {
+            isPlaying = true
+            Task { await startPlayback(nil, label: "reprise", allowOpenApp: true) }
         }
     }
 
-    func next() { Task { await api("POST", "/me/player/next"); refreshSoon() } }
-    func previous() { Task { await api("POST", "/me/player/previous"); refreshSoon() } }
+    func next() { skip("/me/player/next") }
+    func previous() { skip("/me/player/previous") }
+
+    private func skip(_ path: String) {
+        Task {
+            let (status, _) = await api("POST", path)
+            if status == 403 { lastError = "Pas de titre suivant/précédent dans cette lecture." }
+            if status == 404 { lastError = "Aucun appareil Spotify actif." }
+            refreshSoon()
+        }
+    }
 
     func seek(to fraction: Double) {
         guard canSeek, duration > 0 else { return }
@@ -344,40 +384,85 @@ final class SpotifyController: NSObject {
     }
 
     func toggleLike() {
-        guard let uri = trackURI, let id = uri.split(separator: ":").last else { return }
-        isSaved.toggle()
-        let save = isSaved
-        Task { await api(save ? "PUT" : "DELETE", "/me/tracks", query: ["ids": String(id)]) }
-    }
-
-    func play(_ item: SpotifyItem) {
-        guard isConnected else { authorize(); return }
-        let body: [String: Any] = item.id.contains(":track:") || item.id.contains(":episode:")
-            ? ["uris": [item.id]] : ["context_uri": item.id]
-        Log.info(.spotify, "Lecture demandée : \(item.title)")
+        guard let uri = trackURI, let id = uri.split(separator: ":").last.map(String.init) else { return }
+        let save = !isSaved
+        isSaved = save
         Task {
-            let (status, _) = await api("PUT", "/me/player/play", body: body)
-            if status == 404 {
-                await activateDevice(thenPlay: false)
-                await api("PUT", "/me/player/play", body: body)
+            let (status, _) = await api(save ? "PUT" : "DELETE", "/me/tracks", query: ["ids": id])
+            if (200..<300).contains(status) {
+                if save { likedIDs.insert(id) } else { likedIDs.remove(id) }
+                Log.info(.spotify, save ? "Ajouté aux titres likés" : "Retiré des titres likés")
+            } else {
+                isSaved = !save
+                lastError = status == 403 ? "Spotify refuse la modification des favoris pour cette app." : "Favori non enregistré."
             }
-            refreshSoon()
         }
     }
 
-    /// Aucun appareil actif : on transfère la lecture vers l'iPad (ou le premier appareil connu),
-    /// sinon on ouvre l'app Spotify.
-    private func activateDevice(thenPlay: Bool) async {
+    /// Lance un élément. Pour un titre, toute la liste affichée devient la file d'attente
+    /// (sinon « suivant » est impossible : erreur 403 « Restriction violated »).
+    func play(_ item: SpotifyItem, in list: [SpotifyItem] = []) {
+        guard isConnected else { authorize(); return }
+        let isTrack = item.id.contains(":track:") || item.id.contains(":episode:")
+        let body: [String: Any]
+        if isTrack {
+            let queue = list.map(\.id).filter { $0.contains(":track:") || $0.contains(":episode:") }
+            let uris = queue.contains(item.id) ? Array(queue.prefix(100)) : [item.id]
+            body = ["uris": uris, "offset": ["uri": item.id]]
+        } else {
+            body = ["context_uri": item.id]
+        }
+        Log.info(.spotify, "Lecture demandée : \(item.title)")
+        Task { await startPlayback(body, label: item.title, allowOpenApp: true) }
+    }
+
+    /// Démarre / reprend la lecture en visant explicitement un appareil :
+    /// 1. appareil actif ; 2. sinon l'iPad (ou le 1er appareil Spotify Connect) via `device_id` ;
+    /// 3. sinon ouverture de l'app Spotify, et la lecture reprend au retour dans l'app.
+    private func startPlayback(_ body: [String: Any]?, label: String, allowOpenApp: Bool) async {
+        if activeDeviceID != nil {
+            let (status, _) = await api("PUT", "/me/player/play", body: body)
+            if (200..<300).contains(status) { refreshSoon(); return }
+            if status != 404 { refreshSoon(); return }
+        }
+        let devices = await fetchDevices()
+        let target = devices.first { ($0["type"] as? String)?.lowercased() == "tablet" }
+            ?? devices.first { $0["is_active"] as? Bool == true } ?? devices.first
+        if let id = target?["id"] as? String {
+            for attempt in 0..<3 {
+                let (status, _) = await api("PUT", "/me/player/play", query: ["device_id": id], body: body)
+                if (200..<300).contains(status) {
+                    activeDeviceID = id
+                    lastError = nil
+                    Log.info(.spotify, "Lecture sur « \(target?["name"] as? String ?? "?") »")
+                    refreshSoon()
+                    return
+                }
+                if status != 404 && status != 502 { break }
+                try? await Task.sleep(for: .milliseconds(700 * (attempt + 1)))
+            }
+        }
+        guard allowOpenApp else {
+            lastError = "Spotify ne répond pas : lance la lecture une fois dans l'app Spotify."
+            return
+        }
+        // Aucun appareil : iOS ne permet pas de réveiller Spotify en arrière-plan
+        pendingPlay = (body, label)
+        lastError = "Ouverture de Spotify… reviens ici, la lecture démarrera."
+        Log.info(.spotify, "Aucun appareil Spotify : ouverture de l'app, lecture en attente")
+        await UIApplication.shared.open(URL(string: "spotify:")!)
+    }
+
+    private func fetchDevices() async -> [[String: Any]] {
         let (_, data) = await api("GET", "/me/player/devices")
         let devices = (data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["devices"] as? [[String: Any]]) ?? []
-        Log.info(.spotify, "Appareils : \(devices.compactMap { $0["name"] as? String })")
-        let target = devices.first { ($0["type"] as? String)?.lowercased() == "tablet" } ?? devices.first
-        if let id = target?["id"] as? String {
-            await api("PUT", "/me/player", body: ["device_ids": [id], "play": thenPlay])
-        } else {
-            lastError = "Ouvre l'app Spotify une fois pour qu'elle apparaisse comme appareil."
-            await UIApplication.shared.open(URL(string: "spotify:")!)
+        let names = devices.map { d -> String in
+            let name = d["name"] as? String ?? "?"
+            let type = d["type"] as? String ?? "?"
+            return (d["is_active"] as? Bool) == true ? "\(name) (\(type), actif)" : "\(name) (\(type))"
         }
+        Log.info(.spotify, "Appareils : \(names)")
+        return devices
     }
 
     // MARK: - Bibliothèque
@@ -403,6 +488,10 @@ final class SpotifyController: NSObject {
             out.append(SpotifySection(id: "liked", title: "Titres likés", items: items))
         }
         sections = out
+        lastLibraryLoad = Date()
+        if let liked = out.first(where: { $0.id == "liked" }) {
+            likedIDs = Set(liked.items.compactMap { $0.id.split(separator: ":").last.map(String.init) })
+        }
         Log.info(.spotify, "Bibliothèque : \(out.map { "\($0.title) \($0.items.count)" }.joined(separator: ", "))")
     }
 
@@ -452,7 +541,9 @@ final class SpotifyController: NSObject {
 
     func image(url: URL) async -> UIImage? {
         if let cached = imageCache.object(forKey: url as NSURL) { return cached }
-        guard let (data, _) = try? await URLSession.shared.data(from: url), let img = UIImage(data: data) else { return nil }
+        guard let (data, _) = try? await URLSession.shared.data(from: url), let raw = UIImage(data: data) else { return nil }
+        // Décodage hors fil principal (sinon saccades de plusieurs centaines de ms)
+        let img = await raw.byPreparingThumbnail(ofSize: CGSize(width: 320, height: 320)) ?? raw
         imageCache.setObject(img, forKey: url as NSURL)
         return img
     }

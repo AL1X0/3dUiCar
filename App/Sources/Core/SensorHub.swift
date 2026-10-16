@@ -210,6 +210,9 @@ extension SensorHub: CLLocationManagerDelegate {
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Erreur 0 (position momentanément inconnue) : normale en intérieur
+        let code = (error as? CLError)?.code
+        if code == .locationUnknown { return }
         Log.warning(.gps, "Localisation iPad : \(error.localizedDescription)")
     }
 }

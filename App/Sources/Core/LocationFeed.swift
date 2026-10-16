@@ -20,35 +20,56 @@ final class LocationFeed {
     /// Relance l'écoute (bouton du diagnostic) ; fourni par l'app.
     @ObservationIgnored var restartListener: (() -> Void)?
 
-    @ObservationIgnored private var lastPhoneFix: Date?
+    /// Dernier message quelconque de l'iPhone (position ou heartbeat) : sert à l'état de liaison.
+    @ObservationIgnored private var lastPhoneMessage: Date?
+    /// Dernière position iPhone : tant qu'elle est récente, elle prime sur le GPS de l'iPad.
+    @ObservationIgnored private var lastPhoneLocation: Date?
+    @ObservationIgnored private var statsCount = 0
+    @ObservationIgnored private var statsStart = Date()
 
-    /// Position iPad : ignorée tant que l'iPhone fournit un flux récent.
+    /// Position iPad : ignorée tant que l'iPhone fournit des positions récentes.
     func updateFromDevice(_ loc: CLLocation) {
-        if let last = lastPhoneFix, Date().timeIntervalSince(last) < 5 { return }
+        if let last = lastPhoneLocation, Date().timeIntervalSince(last) < 10 { return }
         location = loc
         source = .device
     }
 
     func updateFromPhone(_ loc: CLLocation) {
-        if !phoneConnected { Log.info(.companion, "Flux GPS iPhone reçu") }
-        lastPhoneFix = Date()
+        markMessage()
+        lastPhoneLocation = Date()
         location = loc
         source = .phone
-        phoneConnected = true
     }
 
     func phoneHeartbeat(name: String?) {
-        lastPhoneFix = lastPhoneFix ?? Date()
-        phoneConnected = true
-        if let name { phoneName = name }
+        markMessage()
+        if let name, name != phoneName {
+            phoneName = name
+            Log.info(.companion, "iPhone : \(name)")
+        }
     }
 
-    /// Appelé à 1 Hz : le flux iPhone est perdu après 5 s sans message.
+    private func markMessage() {
+        if !phoneConnected { Log.info(.companion, "Liaison iPhone active") }
+        lastPhoneMessage = Date()
+        phoneConnected = true
+        statsCount += 1
+    }
+
+    /// Appelé à 1 Hz : liaison perdue après 6 s sans aucun message ; statistiques toutes les 60 s.
     func checkTimeout() {
-        guard let last = lastPhoneFix, Date().timeIntervalSince(last) > 5 else { return }
-        Log.warning(.companion, "Flux GPS iPhone perdu (aucun message depuis 5 s)")
+        let now = Date()
+        if now.timeIntervalSince(statsStart) >= 60 {
+            if phoneConnected || statsCount > 0 {
+                Log.debug(.companion, "\(statsCount) messages iPhone sur 60 s · source \(source.rawValue)")
+            }
+            statsCount = 0
+            statsStart = now
+        }
+        guard let last = lastPhoneMessage, now.timeIntervalSince(last) > 6 else { return }
+        Log.warning(.companion, "Liaison iPhone perdue (aucun message depuis 6 s)")
         phoneConnected = false
-        lastPhoneFix = nil
+        lastPhoneMessage = nil
         if source == .phone { source = .none }
     }
 }

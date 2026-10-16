@@ -180,7 +180,7 @@ struct SpotifyLibraryView: View {
 
     private func searchResultRow(_ item: SpotifyItem) -> some View {
         Button {
-            spotify.play(item)
+            spotify.play(item, in: spotify.searchResults)
         } label: {
             HStack(spacing: 14) {
                 itemArtwork(for: item, size: 52, cornerRadius: 4)
@@ -247,7 +247,7 @@ struct SpotifyLibraryView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(alignment: .top, spacing: 16) {
                             ForEach(section.items) { item in
-                                tileView(for: item)
+                                tileView(for: item, in: section.items)
                             }
                         }
                     }
@@ -256,9 +256,9 @@ struct SpotifyLibraryView: View {
         }
     }
 
-    private func tileView(for item: SpotifyItem) -> some View {
+    private func tileView(for item: SpotifyItem, in list: [SpotifyItem]) -> some View {
         Button {
-            spotify.play(item)
+            spotify.play(item, in: list)
         } label: {
             VStack(alignment: .leading, spacing: 8) {
                 itemArtwork(for: item, size: 150, cornerRadius: 6)

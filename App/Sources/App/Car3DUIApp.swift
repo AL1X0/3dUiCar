@@ -51,9 +51,13 @@ struct Car3DUIApp: App {
         .onChange(of: scenePhase) {
             Log.info(.app, "Phase : \(scenePhase)")
             switch scenePhase {
-            case .active: spotify.connect()
+            case .active:
+                // iOS invalide les sockets en arrière-plan : on relance l'écoute au retour
+                companion.start()
+                spotify.connect()
             case .background:
                 spotify.disconnect()
+                companion.stop()
                 Log.markCleanExit()
             default: break
             }
