@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.4.0",
+          "buildVersion": "14",
+          "date": "2026-10-16T20:03:43Z",
+          "localizedDescription": "Navigation guidée (recherche, itinéraires, voix, recalcul), nouvelle app iPhone « 3dUiCar GPS » pour le GPS, module OBD ESP32 en Bluetooth (régime, températures, rapport engagé, codes défaut), enregistrement du bus CAN, Spotify prêt à l'emploi.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.4.0/Car3DUI.ipa",
+          "size": 9470904,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.3.0",
           "buildVersion": "10",
           "date": "2026-10-16T19:44:08Z",
@@ -67,7 +76,17 @@
       "tintColor": "#005AFF",
       "category": "utilities",
       "screenshots": [],
-      "versions": [],
+      "versions": [
+        {
+          "version": "0.4.0",
+          "buildVersion": "14",
+          "date": "2026-10-16T20:03:43Z",
+          "localizedDescription": "Navigation guidée (recherche, itinéraires, voix, recalcul), nouvelle app iPhone « 3dUiCar GPS » pour le GPS, module OBD ESP32 en Bluetooth (régime, températures, rapport engagé, codes défaut), enregistrement du bus CAN, Spotify prêt à l'emploi.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.4.0/Car3DUICompanion.ipa",
+          "size": 1257246,
+          "minOSVersion": "17.0"
+        }
+      ],
       "appPermissions": {
         "entitlements": [],
         "privacy": {
