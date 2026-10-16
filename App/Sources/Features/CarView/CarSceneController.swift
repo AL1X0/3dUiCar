@@ -148,7 +148,7 @@ final class CarSceneController {
         if let tex = Self.contactShadowTexture() {
             var m = UnlitMaterial()
             m.color = .init(tint: .black, texture: .init(tex))
-            m.blending = .transparent(opacity: 1)
+            m.blending = .transparent(opacity: .init(floatLiteral: 1.0))
             let shadow = ModelEntity(mesh: .generatePlane(width: 2.9, depth: 5.4), materials: [m])
             shadow.position.y = 0.003
             carRoot.addChild(shadow)

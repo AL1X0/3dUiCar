@@ -42,18 +42,13 @@ jobs:
 
       - name: Build (unsigned)
         run: |
-          set -o pipefail
-          xcodebuild \
-            -project Car3DUI.xcodeproj \
-            -target Car3DUI \
-            -configuration Release \
-            -sdk iphoneos \
-            SYMROOT="$PWD/build" \
-            MARKETING_VERSION="${{ steps.ver.outputs.version }}" \
-            CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build | tee build.log | grep -E "error:|warning: .*Swift|BUILD (SUCCEEDED|FAILED)" || true
-          test -d build/Release-iphoneos/Car3DUI.app
+          status=0
+          xcodebuild             -project Car3DUI.xcodeproj             -target Car3DUI             -configuration Release             -sdk iphoneos             SYMROOT="$PWD/build"             MARKETING_VERSION="${{ steps.ver.outputs.version }}"             CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}"             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""             build > build.log 2>&1 || status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" build.log || true
+          if [ $status -ne 0 ] || ! grep -q "BUILD SUCCEEDED" build.log; then
+            tail -60 build.log
+            exit 1
+          fi
 
       - name: Package .ipa
         run: |
