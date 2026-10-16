@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.6.0",
+          "buildVersion": "19",
+          "date": "2026-10-16T21:07:07Z",
+          "localizedDescription": "App plus fluide, rotation autour de la voiture 3D, liaison GPS iPhone fiabilisée (Wi-Fi pair-à-pair, IP manuelle), Spotify reconnecté en permanence (nouvelle connexion à refaire une fois), journal complet partageable (Réglages › Journal).",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.0/Car3DUI.ipa",
+          "size": 9571778,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.5.0",
           "buildVersion": "17",
           "date": "2026-10-16T20:32:27Z",
@@ -86,6 +95,15 @@
       "category": "utilities",
       "screenshots": [],
       "versions": [
+        {
+          "version": "0.6.0",
+          "buildVersion": "19",
+          "date": "2026-10-16T21:07:07Z",
+          "localizedDescription": "App plus fluide, rotation autour de la voiture 3D, liaison GPS iPhone fiabilisée (Wi-Fi pair-à-pair, IP manuelle), Spotify reconnecté en permanence (nouvelle connexion à refaire une fois), journal complet partageable (Réglages › Journal).",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.0/Car3DUICompanion.ipa",
+          "size": 1320100,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "0.5.0",
           "buildVersion": "17",
