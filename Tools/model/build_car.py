@@ -157,6 +157,30 @@ hinge("Door_FR", lambda a, b: mathutils.Vector((a.x, (a.y + b.y) / 2, b.z)))
 hinge("Hood", lambda a, b: mathutils.Vector((0, b.y, a.z)))
 hinge("Trunk", lambda a, b: mathutils.Vector((0, b.y, b.z)))
 
+# 4 ter. Emplacements des clignotants : angle extérieur des vrais feux (phares / feux arrière).
+def light_corner(keys, side, front):
+    pts = [v.co.copy() for o in meshes if any(k in o.name for k in keys)
+           for v in o.data.vertices if (v.co.x > 0) == (side > 0)]
+    if not pts:
+        print("WARN pas de feux pour", keys, side)
+        return None
+    outer = max(abs(p.x) for p in pts)
+    sel = [p for p in pts if abs(p.x) > outer - 0.10]
+    # extrémité avant (phares) ou arrière (feux) parmi la partie extérieure
+    zs = sorted(p.z for p in sel)
+    zref = zs[-1] if front else zs[0]
+    sel = [p for p in sel if abs(p.z - zref) < 0.18] or sel
+    c = sum(sel, mathutils.Vector()) / len(sel)
+    return c
+
+
+for key, keys, front in (("F", ("SM_Light_F",), True), ("R", ("SM_Light_B", "red_glass"), False)):
+    for side, name in ((1, "L"), (-1, "R")):
+        c = light_corner(keys, side, front)
+        if c is not None:
+            node(f"Blinker_{key}{name}", c, sprung)
+            print(f"BLINKER {key}{name} ({c.x:+.2f}, {c.y:+.2f}, {c.z:+.2f})")
+
 # 4 bis. Fusion des maillages par (groupe, matériau) : beaucoup moins d'appels de dessin.
 def join_by_material(parent):
     kids = [o for o in parent.children if o.type == "MESH"]

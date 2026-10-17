@@ -55,6 +55,8 @@ final class CarSceneController: NSObject {
     var topInset: CGFloat = 260
     var bottomInset: CGFloat = 240
     var showLanes = true
+    /// Tracé de la route devant (repère voiture : x gauche, z avant), fourni par RoadAhead.
+    var roadPath: (() -> [SIMD2<Float>]?)?
     /// Finition « argile » gris clair façon visualisation Tesla, ou peinture d'origine.
     var clayFinish = false {
         didSet { if clayFinish != oldValue { applyFinish() } }
@@ -165,7 +167,7 @@ final class CarSceneController: NSObject {
             carModels = Self.models(in: car)
             brakeLightModels = carModels.filter { $0.name.lowercased().contains("red_glass") }
             applyFinish()
-            setupBlinkers(bounds: car.visualBounds(relativeTo: carRoot))
+            setupBlinkers(in: car)
             Log.info(.scene3D, "Car.usdz chargé : \(carModels.count) maillages, pivots \(steer.count) roues")
         } catch {
             Log.error(.scene3D, "Car.usdz introuvable : \(error)")
@@ -235,24 +237,29 @@ final class CarSceneController: NSObject {
         }
     }
 
-    /// Clignotants : petits blocs émissifs aux 4 coins (le modèle n'a pas de mesh dédié).
-    private func setupBlinkers(bounds: BoundingBox) {
-        let mat = UnlitMaterial(color: UIColor(red: 1, green: 0.6, blue: 0, alpha: 1))
-        let mesh = MeshResource.generateBox(width: 0.1, height: 0.06, depth: 0.06, cornerRadius: 0.02)
-        let x = bounds.max.x - 0.12, zf = bounds.max.z - 0.15, zr = bounds.min.z + 0.12
-        for (pos, left) in [([x, 0.72, zf], true), ([-x, 0.72, zf], false),
-                            ([x, 0.85, zr], true), ([-x, 0.85, zr], false)] as [(SIMD3<Float>, Bool)] {
-            let e = ModelEntity(mesh: mesh, materials: [mat])
-            e.isEnabled = false
-            if let sprung {
-                sprung.addChild(e)
-                e.setPosition(pos, relativeTo: carRoot)
-            } else {
-                carRoot.addChild(e)
-                e.position = pos
+    /// Clignotants : lueurs orange posées sur les nœuds `Blinker_FL/FR/RL/RR` du modèle,
+    /// placés dans Blender à l'angle extérieur des vrais phares et feux arrière.
+    private func setupBlinkers(in car: Entity) {
+        var core = UnlitMaterial(color: UIColor(red: 1, green: 0.62, blue: 0.05, alpha: 1))
+        core.blending = .transparent(opacity: .init(floatLiteral: 0.95))
+        var halo = UnlitMaterial(color: UIColor(red: 1, green: 0.55, blue: 0, alpha: 1))
+        halo.blending = .transparent(opacity: .init(floatLiteral: 0.28))
+        let coreMesh = MeshResource.generateSphere(radius: 0.045)
+        let haloMesh = MeshResource.generateSphere(radius: 0.10)
+        for (name, left) in [("Blinker_FL", true), ("Blinker_FR", false), ("Blinker_RL", true), ("Blinker_RR", false)] {
+            guard let anchor = car.findEntity(named: name) else {
+                Log.warning(.scene3D, "Nœud \(name) absent du modèle")
+                continue
             }
-            blinkers.append((e, left))
+            let glow = ModelEntity(mesh: coreMesh, materials: [core])
+            glow.addChild(ModelEntity(mesh: haloMesh, materials: [halo]))
+            glow.scale = [1.6, 0.7, 0.9]                       // forme allongée de feu
+            glow.position = [left ? 0.03 : -0.03, 0, 0]        // léger débord vers l'extérieur
+            glow.isEnabled = false
+            anchor.addChild(glow)
+            blinkers.append((glow, left))
         }
+        Log.info(.scene3D, "\(blinkers.count) clignotants placés sur les feux")
     }
 
     private static func models(in e: Entity) -> [ModelEntity] {
@@ -343,20 +350,39 @@ final class CarSceneController: NSObject {
             (laneLeft + laneRight).forEach { $0.isEnabled = show }
         }
         guard show else { return }
-        let k = speed > 1.5 ? yaw / speed : 0          // courbure (1/m), + = gauche
-        for (i, pair) in zip(laneLeft, laneRight).enumerated() {
-            let z = Float(i) * 2 - 6
-            let dx = 0.5 * k * z * z
-            let heading = atan(k * z)
-            for (e, side) in [(pair.0, Float(1)), (pair.1, Float(-1))] {
-                e.position = [side * 1.7 + dx, 0.006, z]
-                e.orientation = simd_quatf(angle: heading, axis: [0, 1, 0])
+
+        // Axe de la voie : tracé GPS/carte si disponible, sinon arc déduit du lacet
+        var center: [SIMD2<Float>]
+        if let path = roadPath?(), path.count >= 2 {
+            center = path
+            let dir = simd_normalize(path[1] - path[0])
+            for k in (1...3).reversed() { center.insert(path[0] - dir * Float(k) * 2, at: 0) }
+        } else {
+            let k = speed > 1.5 ? yaw / speed : 0          // courbure (1/m), + = gauche
+            center = (0...31).map { i in
+                let z = Float(i) * 2 - 6
+                return SIMD2(0.5 * k * z * z, z)
+            }
+        }
+        let half: Float = 1.7
+        for (side, lanes) in [(Float(1), laneLeft), (Float(-1), laneRight)] {
+            for (i, e) in lanes.enumerated() {
+                guard i + 1 < center.count else { e.isEnabled = false; continue }
+                let a = center[i], b = center[i + 1]
+                let d = b - a
+                let len = simd_length(d)
+                guard len > 0.01 else { e.isEnabled = false; continue }
+                let n = SIMD2(d.y, -d.x) / len               // normale vers la gauche (x+)
+                let pa = a + n * half * side, pb = b + n * half * side
+                let mid = (pa + pb) / 2
+                e.isEnabled = true
+                e.position = [mid.x, 0.006, mid.y]
+                e.orientation = simd_quatf(angle: atan2(d.x, d.y), axis: [0, 1, 0])
+                e.scale = [1, 1, simd_length(pb - pa) / 2.0]
             }
         }
     }
 
-    /// Caméra en coordonnées sphériques autour d'une cible ; l'orbite de l'utilisateur s'ajoute.
-    /// En conduite, elle revient seule à la vue arrière 6 s après le dernier geste.
     private static let vFOV: Float = 38 * .pi / 180
 
     /// Caméra en coordonnées sphériques autour de la voiture. La distance est calculée pour que

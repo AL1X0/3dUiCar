@@ -7,6 +7,7 @@ struct Car3DUIApp: App {
     @State private var feed: LocationFeed
     @State private var esp32: ESP32Source
     @State private var nav = NavigationModel()
+    @State private var road = RoadAhead()
     @State private var companion: CompanionReceiver
     @State private var weather: WeatherService
     @State private var settings = AppSettings()
@@ -36,9 +37,14 @@ struct Car3DUIApp: App {
                 .environment(feed)
                 .environment(esp32)
                 .environment(nav)
+                .environment(road)
                 .onOpenURL { spotify.handle(url: $0) }
+                .onChange(of: nav.route?.polyline) { _, poly in road.setRoute(poly) }
                 .onChange(of: feed.location) { _, loc in
-                    if let loc { weather.update(location: loc) }
+                    if let loc {
+                        weather.update(location: loc)
+                        road.update(location: loc)
+                    }
                 }
                 .onAppear {
                     nav.settings = settings

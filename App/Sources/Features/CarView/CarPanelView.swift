@@ -13,6 +13,7 @@ struct CarSceneView: UIViewRepresentable {
 struct CarPanelView: View {
     @Environment(VehicleState.self) private var vehicle
     @Environment(AppSettings.self) private var settings
+    @Environment(RoadAhead.self) private var road
     @Environment(\.palette) private var palette
     @Environment(\.colorScheme) private var colorScheme
     @State private var controller: CarSceneController?
@@ -33,7 +34,11 @@ struct CarPanelView: View {
                 .frame(maxHeight: .infinity, alignment: .bottom)
         }
         .onAppear {
-            if controller == nil { controller = CarSceneController(vehicle: vehicle) }
+            if controller == nil {
+                let c = CarSceneController(vehicle: vehicle)
+                c.roadPath = { [weak road] in road?.localPath() }
+                controller = c
+            }
             syncController()
         }
         .onChange(of: vehicle.gear) { syncController() }
