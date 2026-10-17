@@ -14,7 +14,9 @@ final class SystemVolume {
     @ObservationIgnored private var observation: NSKeyValueObservation?
 
     init() {
-        try? AVAudioSession.sharedInstance().setActive(true, options: [])
+        // Session « ambiante » mixable : l'app ne coupe JAMAIS Spotify ni la musique des autres apps.
+        // (La catégorie par défaut d'iOS est exclusive et arrêtait Spotify au retour dans l'app.)
+        AudioSession.configureMixable()
         observation = AVAudioSession.sharedInstance().observe(\.outputVolume) { [weak self] session, _ in
             let v = session.outputVolume
             Task { @MainActor in self?.level = v }
@@ -51,4 +53,34 @@ struct VolumeHost: UIViewRepresentable {
         return v
     }
     func updateUIView(_ uiView: UIView, context: Context) {}
+}
+
+/// Gestion centralisée de la session audio de l'app.
+enum AudioSession {
+    /// Par défaut : ambiante + mixable, n'interrompt aucune autre app.
+    static func configureMixable() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true)
+            Log.info(.app, "Session audio mixable (Spotify n'est pas interrompu)")
+        } catch {
+            Log.error(.app, "Session audio : \(error.localizedDescription)")
+        }
+    }
+
+    /// Pendant une annonce vocale : baisse le volume des autres apps au lieu de les couper.
+    static func beginVoicePrompt() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .mixWithOthers,
+                                                                          .interruptSpokenAudioAndMixWithOthers])
+        try? session.setActive(true)
+    }
+
+    /// Fin d'annonce : on rend le volume à Spotify et on repasse en mode ambiant.
+    static func endVoicePrompt() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+        configureMixable()
+    }
 }

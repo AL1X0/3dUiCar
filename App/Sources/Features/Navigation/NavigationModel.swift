@@ -81,6 +81,7 @@ final class NavigationModel: NSObject {
 
     override init() {
         super.init()
+        speech.delegate = self
         completer.delegate = self
         completer.resultTypes = [.address, .pointOfInterest]
     }
@@ -229,6 +230,7 @@ final class NavigationModel: NSObject {
         let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: "fr-FR")
         u.rate = 0.5
+        AudioSession.beginVoicePrompt()
         speech.speak(u)
     }
 }
@@ -271,4 +273,12 @@ extension MKPolyline {
 
 private extension String {
     var lowercasedFirst: String { prefix(1).lowercased() + dropFirst() }
+}
+
+extension NavigationModel: AVSpeechSynthesizerDelegate {
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            if !synthesizer.isSpeaking { AudioSession.endVoicePrompt() }
+        }
+    }
 }
