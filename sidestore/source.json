@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.7.0",
+          "buildVersion": "24",
+          "date": "2026-10-17T00:47:36Z",
+          "localizedDescription": "Spotify : plus jamais redirigé vers l'app Spotify. Si Spotify dort, réveil express avec retour automatique dans 3dUiCar. Nouveau sélecteur « Lire sur… » (iPad, iPhone, enceinte…).",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.7.0/Car3DUI.ipa",
+          "size": 9680954,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.6.1",
           "buildVersion": "22",
           "date": "2026-10-16T21:30:47Z",
@@ -92,11 +101,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon."
         }
       },
-      "version": "0.6.1",
-      "versionDate": "2026-10-16T21:30:47Z",
-      "versionDescription": "Correctifs : liaison GPS iPhone stable, Spotify (lecture sur l'iPad, suivant/précédent, reprise après ouverture de Spotify, favoris), saccades de la bibliothèque supprimées.",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.1/Car3DUI.ipa",
-      "size": 9583375,
+      "version": "0.7.0",
+      "versionDate": "2026-10-17T00:47:36Z",
+      "versionDescription": "Spotify : plus jamais redirigé vers l'app Spotify. Si Spotify dort, réveil express avec retour automatique dans 3dUiCar. Nouveau sélecteur « Lire sur… » (iPad, iPhone, enceinte…).",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.7.0/Car3DUI.ipa",
+      "size": 9680954,
       "screenshotURLs": [],
       "permissions": []
     },
@@ -111,6 +120,15 @@
       "category": "utilities",
       "screenshots": [],
       "versions": [
+        {
+          "version": "0.7.0",
+          "buildVersion": "24",
+          "date": "2026-10-17T00:47:36Z",
+          "localizedDescription": "Spotify : plus jamais redirigé vers l'app Spotify. Si Spotify dort, réveil express avec retour automatique dans 3dUiCar. Nouveau sélecteur « Lire sur… » (iPad, iPhone, enceinte…).",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.7.0/Car3DUICompanion.ipa",
+          "size": 1320100,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "0.6.1",
           "buildVersion": "22",
@@ -156,11 +174,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local sert à trouver l'iPad et lui envoyer la position."
         }
       },
-      "version": "0.6.1",
-      "versionDate": "2026-10-16T21:30:47Z",
-      "versionDescription": "Correctifs : liaison GPS iPhone stable, Spotify (lecture sur l'iPad, suivant/précédent, reprise après ouverture de Spotify, favoris), saccades de la bibliothèque supprimées.",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.6.1/Car3DUICompanion.ipa",
-      "size": 1320101,
+      "version": "0.7.0",
+      "versionDate": "2026-10-17T00:47:36Z",
+      "versionDescription": "Spotify : plus jamais redirigé vers l'app Spotify. Si Spotify dort, réveil express avec retour automatique dans 3dUiCar. Nouveau sélecteur « Lire sur… » (iPad, iPhone, enceinte…).",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.7.0/Car3DUICompanion.ipa",
+      "size": 1320100,
       "screenshotURLs": [],
       "permissions": []
     }
