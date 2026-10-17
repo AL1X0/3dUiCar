@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.8.0",
+          "buildVersion": "26",
+          "date": "2026-10-17T00:56:05Z",
+          "localizedDescription": "Vue 3D cadrée selon la taille du panneau, animations plus vivantes (caisse, portes, boutons, panneaux), nouvelles icônes.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.0/Car3DUI.ipa",
+          "size": 9814460,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.7.0",
           "buildVersion": "24",
           "date": "2026-10-17T00:47:36Z",
@@ -101,11 +110,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon."
         }
       },
-      "version": "0.7.0",
-      "versionDate": "2026-10-17T00:47:36Z",
-      "versionDescription": "Spotify : plus jamais redirigé vers l'app Spotify. Si Spotify dort, réveil express avec retour automatique dans 3dUiCar. Nouveau sélecteur « Lire sur… » (iPad, iPhone, enceinte…).",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.7.0/Car3DUI.ipa",
-      "size": 9680954,
+      "version": "0.8.0",
+      "versionDate": "2026-10-17T00:56:05Z",
+      "versionDescription": "Vue 3D cadrée selon la taille du panneau, animations plus vivantes (caisse, portes, boutons, panneaux), nouvelles icônes.",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.0/Car3DUI.ipa",
+      "size": 9814460,
       "screenshotURLs": [],
       "permissions": []
     },
@@ -120,6 +129,15 @@
       "category": "utilities",
       "screenshots": [],
       "versions": [
+        {
+          "version": "0.8.0",
+          "buildVersion": "26",
+          "date": "2026-10-17T00:56:05Z",
+          "localizedDescription": "Vue 3D cadrée selon la taille du panneau, animations plus vivantes (caisse, portes, boutons, panneaux), nouvelles icônes.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.0/Car3DUICompanion.ipa",
+          "size": 1320137,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "0.7.0",
           "buildVersion": "24",
@@ -174,11 +192,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local sert à trouver l'iPad et lui envoyer la position."
         }
       },
-      "version": "0.7.0",
-      "versionDate": "2026-10-17T00:47:36Z",
-      "versionDescription": "Spotify : plus jamais redirigé vers l'app Spotify. Si Spotify dort, réveil express avec retour automatique dans 3dUiCar. Nouveau sélecteur « Lire sur… » (iPad, iPhone, enceinte…).",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.7.0/Car3DUICompanion.ipa",
-      "size": 1320100,
+      "version": "0.8.0",
+      "versionDate": "2026-10-17T00:56:05Z",
+      "versionDescription": "Vue 3D cadrée selon la taille du panneau, animations plus vivantes (caisse, portes, boutons, panneaux), nouvelles icônes.",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.0/Car3DUICompanion.ipa",
+      "size": 1320137,
       "screenshotURLs": [],
       "permissions": []
     }
