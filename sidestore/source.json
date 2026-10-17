@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.8.1",
+          "buildVersion": "29",
+          "date": "2026-10-17T10:41:37Z",
+          "localizedDescription": "Spotify n'est plus coupé au retour dans l'app (session audio mixable). Clignotants placés sur les vrais feux. Lignes bleues qui suivent la route réelle (itinéraire ou route détectée via la carte).",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.1/Car3DUI.ipa",
+          "size": 9826572,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.8.0",
           "buildVersion": "26",
           "date": "2026-10-17T00:56:05Z",
@@ -110,11 +119,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon."
         }
       },
-      "version": "0.8.0",
-      "versionDate": "2026-10-17T00:56:05Z",
-      "versionDescription": "Vue 3D cadrée selon la taille du panneau, animations plus vivantes (caisse, portes, boutons, panneaux), nouvelles icônes.",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.0/Car3DUI.ipa",
-      "size": 9814460,
+      "version": "0.8.1",
+      "versionDate": "2026-10-17T10:41:37Z",
+      "versionDescription": "Spotify n'est plus coupé au retour dans l'app (session audio mixable). Clignotants placés sur les vrais feux. Lignes bleues qui suivent la route réelle (itinéraire ou route détectée via la carte).",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.1/Car3DUI.ipa",
+      "size": 9826572,
       "screenshotURLs": [],
       "permissions": []
     },
@@ -129,6 +138,15 @@
       "category": "utilities",
       "screenshots": [],
       "versions": [
+        {
+          "version": "0.8.1",
+          "buildVersion": "29",
+          "date": "2026-10-17T10:41:37Z",
+          "localizedDescription": "Spotify n'est plus coupé au retour dans l'app (session audio mixable). Clignotants placés sur les vrais feux. Lignes bleues qui suivent la route réelle (itinéraire ou route détectée via la carte).",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.1/Car3DUICompanion.ipa",
+          "size": 1320139,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "0.8.0",
           "buildVersion": "26",
@@ -192,11 +210,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local sert à trouver l'iPad et lui envoyer la position."
         }
       },
-      "version": "0.8.0",
-      "versionDate": "2026-10-17T00:56:05Z",
-      "versionDescription": "Vue 3D cadrée selon la taille du panneau, animations plus vivantes (caisse, portes, boutons, panneaux), nouvelles icônes.",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.0/Car3DUICompanion.ipa",
-      "size": 1320137,
+      "version": "0.8.1",
+      "versionDate": "2026-10-17T10:41:37Z",
+      "versionDescription": "Spotify n'est plus coupé au retour dans l'app (session audio mixable). Clignotants placés sur les vrais feux. Lignes bleues qui suivent la route réelle (itinéraire ou route détectée via la carte).",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.1/Car3DUICompanion.ipa",
+      "size": 1320139,
       "screenshotURLs": [],
       "permissions": []
     }
