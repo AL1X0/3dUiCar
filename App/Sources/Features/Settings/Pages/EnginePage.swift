@@ -32,7 +32,7 @@ struct EnginePage: View {
                     }
                     .font(TeslaFont.ui(13, .semibold))
                     .foregroundStyle(Theme.accent)
-                    .buttonStyle(.plain)
+                    .buttonStyle(TeslaPressStyle())
                 }
                 .padding(14)
                 .background(palette.panelSecondary.opacity(0.4))

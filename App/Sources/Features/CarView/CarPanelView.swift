@@ -40,6 +40,7 @@ struct CarPanelView: View {
         .onChange(of: colorScheme) { syncController() }
         .onChange(of: settings.showLanes) { syncController() }
         .onChange(of: settings.carFinish) { syncController() }
+        .onChange(of: settings.mediaHidden) { syncController() }
     }
 
     /// Étiquettes « Ouvrir capot / coffre » du Figma (Frunk / Trunk Open).
@@ -50,7 +51,7 @@ struct CarPanelView: View {
             Spacer()
             shortcut(title: "Coffre", open: $v.trunkOpen)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TeslaPressStyle())
         .padding(.horizontal, 32)
         .offset(y: -120)
     }
@@ -77,6 +78,9 @@ struct CarPanelView: View {
         controller.cameraMode = vehicle.gear == .park ? .parked : .drive
         controller.backgroundColor = UIColor(palette.background)
         controller.showLanes = settings.showLanes
+        // Zones masquées par le HUD (haut) et le lecteur Spotify (bas) : la caméra cadre le reste
+        controller.topInset = vehicle.gear == .park ? 130 : 290
+        controller.bottomInset = settings.mediaHidden ? 30 : 250
         controller.clayFinish = settings.carFinish == .clay
     }
 }

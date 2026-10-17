@@ -27,8 +27,8 @@ struct DockView: View {
     var body: some View {
         HStack(spacing: 0) {
             dockButton(action: onCarTap) {
-                Image("app.car").renderingMode(.template).resizable().scaledToFit()
-                    .frame(width: 40, height: 40)
+                Image("nav.car").renderingMode(.template).resizable().scaledToFit()
+                    .frame(width: 38, height: 38)
                     .foregroundStyle(palette.dockText)
             }
 
@@ -42,11 +42,7 @@ struct DockView: View {
             Spacer()
 
             HStack(spacing: 18) {
-                appButton(.navigation) {
-                    Image("nav.navigation").renderingMode(.template).resizable().scaledToFit()
-                        .padding(9).foregroundStyle(.white)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(Theme.accent))
-                }
+                appButton(.navigation) { Image("dock.navigation").resizable().scaledToFit() }
                 appButton(.spotify) {
                     Image("app.spotify").resizable().scaledToFit()
                         .overlay(alignment: .topTrailing) {
@@ -55,16 +51,8 @@ struct DockView: View {
                             }
                         }
                 }
-                appButton(.trips) {
-                    Image("nav.trip").renderingMode(.template).resizable().scaledToFit()
-                        .padding(9).foregroundStyle(.white)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(Color(hex: 0x5A5A5A)))
-                }
-                appButton(.engine) {
-                    Image("nav.power").renderingMode(.template).resizable().scaledToFit()
-                        .padding(9).foregroundStyle(.white)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(Theme.teal))
-                }
+                appButton(.trips) { Image("dock.trips").resizable().scaledToFit() }
+                appButton(.engine) { Image("dock.engine").resizable().scaledToFit() }
             }
 
             Spacer()
@@ -93,16 +81,16 @@ struct DockView: View {
 
     private func dockButton<Label: View>(action: @escaping () -> Void, @ViewBuilder label: () -> Label) -> some View {
         Button(action: action) { label() }
-            .buttonStyle(.plain)
+            .buttonStyle(TeslaPressStyle())
             .frame(minWidth: Theme.minTouch, minHeight: Theme.minTouch)
             .contentShape(Rectangle())
     }
 
     private func appButton<Icon: View>(_ app: DockApp, @ViewBuilder icon: () -> Icon) -> some View {
         Button { onApp(app) } label: {
-            icon().frame(width: 44, height: 44)
+            icon().frame(width: 50, height: 50)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TeslaPressStyle())
         .frame(minWidth: Theme.minTouch, minHeight: Theme.minTouch)
         .contentShape(Rectangle())
         .accessibilityLabel(app.title)

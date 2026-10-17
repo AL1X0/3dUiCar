@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.7.0"
+    MARKETING_VERSION: "0.8.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
@@ -38,6 +38,7 @@ targets:
         SpotifyClientID: $(SPOTIFY_CLIENT_ID)
         LSApplicationQueriesSchemes: [spotify]
         UIFileSharingEnabled: true
+        CADisableMinimumFrameDurationOnPhone: true
         LSSupportsOpeningDocumentsInPlace: true
         NSBonjourServices: [_car3dui._udp]
         CFBundleURLTypes:
@@ -80,6 +81,7 @@ targets:
         NSBonjourServices: [_car3dui._udp]
         UIBackgroundModes: [location]
         UIFileSharingEnabled: true
+        CADisableMinimumFrameDurationOnPhone: true
         LSSupportsOpeningDocumentsInPlace: true
     settings:
       base:

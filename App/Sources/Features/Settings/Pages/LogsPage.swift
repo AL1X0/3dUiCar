@@ -68,7 +68,7 @@ struct LogsPage: View {
                             .background(category == nil ? Theme.accent : palette.panelSecondary)
                             .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TeslaPressStyle())
 
                     ForEach(LogCategory.allCases, id: \.self) { cat in
                         let isSelected = category == cat
@@ -83,7 +83,7 @@ struct LogsPage: View {
                                 .background(isSelected ? Theme.accent : palette.panelSecondary)
                                 .clipShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(TeslaPressStyle())
                     }
                 }
             }

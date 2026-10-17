@@ -3,7 +3,7 @@
     {
       "filename": "nav.software.png",
       "idiom": "universal",
-      "scale": "2x"
+      "scale": "3x"
     }
   ],
   "info": {
@@ -11,6 +11,7 @@
     "version": 1
   },
   "properties": {
-    "template-rendering-intent": "template"
+    "template-rendering-intent": "template",
+    "preserves-vector-representation": false
   }
 }

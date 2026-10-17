@@ -53,7 +53,7 @@ struct SearchPage: View {
                         .frame(height: 48)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TeslaPressStyle())
 
                     if section != filteredSections.last {
                         Rectangle()

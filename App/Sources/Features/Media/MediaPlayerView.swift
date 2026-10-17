@@ -23,7 +23,7 @@ struct MediaPlayerView: View {
             GrabHandle()
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    withAnimation(Motion.panel) {
                         expanded.toggle()
                     }
                 }
@@ -41,7 +41,7 @@ struct MediaPlayerView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 3)
         .swipeToDismiss(.down) {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAnimation(Motion.panel) {
                 if expanded {
                     expanded = false
                 } else {
@@ -53,13 +53,13 @@ struct MediaPlayerView: View {
             DragGesture(minimumDistance: 12)
                 .onEnded { value in
                     if value.translation.height < -40 && !expanded {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        withAnimation(Motion.panel) {
                             expanded = true
                         }
                     }
                 }
         )
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: expanded)
+        .animation(Motion.panel, value: expanded)
     }
 
     // MARK: - Rangée principale
@@ -126,7 +126,7 @@ struct MediaPlayerView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TeslaPressStyle())
             .disabled(!spotify.isConnected)
 
             Button {
@@ -138,7 +138,7 @@ struct MediaPlayerView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TeslaPressStyle())
 
             Button {
                 spotify.togglePlay()
@@ -149,7 +149,7 @@ struct MediaPlayerView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TeslaPressStyle())
 
             Button {
                 spotify.next()
@@ -160,7 +160,7 @@ struct MediaPlayerView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TeslaPressStyle())
         }
     }
 
@@ -231,7 +231,7 @@ struct MediaPlayerView: View {
                         .frame(width: 36, height: 36)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TeslaPressStyle())
 
                 Button {
                     spotify.cycleRepeat()
@@ -242,7 +242,7 @@ struct MediaPlayerView: View {
                         .frame(width: 36, height: 36)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TeslaPressStyle())
 
                 Spacer()
 
@@ -259,7 +259,7 @@ struct MediaPlayerView: View {
                         .background(palette.panelSecondary.opacity(0.5))
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TeslaPressStyle())
 
                 SpotifyDeviceMenu()
             }

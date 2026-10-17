@@ -93,7 +93,7 @@ struct MapPanelView: View {
                         .frame(width: Theme.minTouch, height: Theme.minTouch)
                         .background(.ultraThinMaterial, in: Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TeslaPressStyle())
                 .padding(20)
             }
         }
@@ -114,7 +114,7 @@ struct MapPanelView: View {
         .frame(height: 48)
         .background(palette.panel, in: Capsule())
         .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
-        .onTapGesture { withAnimation(.spring(duration: 0.3)) { etaCollapsed = false } }
+        .onTapGesture { withAnimation(Motion.panel) { etaCollapsed = false } }
         .swipeToDismiss(.up, threshold: 30) { etaCollapsed = false }
     }
 

@@ -17,9 +17,9 @@ struct SpotifyLibraryView: View {
             .onChanged { drag = max(0, $0.translation.height) }
             .onEnded { g in
                 if drag > 90 || g.predictedEndTranslation.height > 260 {
-                    withAnimation(.spring(duration: 0.3)) { settings.libraryOpen = false }
+                    withAnimation(Motion.panel) { settings.libraryOpen = false }
                 }
-                withAnimation(.spring(duration: 0.3)) { drag = 0 }
+                withAnimation(Motion.panel) { drag = 0 }
             }
     }
 
@@ -51,7 +51,7 @@ struct SpotifyLibraryView: View {
                 SpotifyDeviceMenu()
 
                 Button {
-                    withAnimation(.spring(duration: 0.3)) {
+                    withAnimation(Motion.panel) {
                         settings.libraryOpen = false
                     }
                 } label: {
@@ -61,7 +61,7 @@ struct SpotifyLibraryView: View {
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TeslaPressStyle())
                 .accessibilityLabel("Fermer la bibliothèque Spotify")
             }
             .padding(.horizontal, 24)
@@ -210,7 +210,7 @@ struct SpotifyLibraryView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TeslaPressStyle())
     }
 
     // MARK: - Sections de la Bibliothèque
@@ -283,7 +283,7 @@ struct SpotifyLibraryView: View {
             .frame(width: 150)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TeslaPressStyle())
     }
 
     // MARK: - Vignettes / Artwork

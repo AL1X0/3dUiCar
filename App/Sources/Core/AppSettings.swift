@@ -33,13 +33,13 @@ enum SettingsSection: String, CaseIterable, Identifiable, Sendable {
         case .controls: "nav.controls"
         case .display: "nav.display"
         case .navigation: "nav.navigation"
-        case .music: "app.music"
+        case .music: "nav.music"
         case .trips: "nav.trip"
-        case .engine: "nav.power"
-        case .sensors: "nav.steering"
+        case .engine: "nav.engine"
+        case .sensors: "nav.sensors"
         case .service: "nav.service"
         case .software: "nav.software"
-        case .logs: "nav.eye"
+        case .logs: "nav.logs"
         }
     }
 }

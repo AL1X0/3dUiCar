@@ -41,7 +41,7 @@ struct NavSearchBar: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TeslaPressStyle())
             } else {
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
@@ -63,7 +63,7 @@ struct NavSearchBar: View {
                                 .foregroundStyle(palette.textSecondary)
                                 .frame(width: 32, height: 32)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(TeslaPressStyle())
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 54)
@@ -108,7 +108,7 @@ struct NavSearchBar: View {
                                     .frame(height: 56)
                                     .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(TeslaPressStyle())
 
                                 if index < displayedSuggestions.count - 1 {
                                     Divider()
@@ -199,7 +199,7 @@ struct RoutePreviewCard: View {
                                     .stroke(isSelected ? Theme.accent : palette.outline, lineWidth: isSelected ? 2 : 1)
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(TeslaPressStyle())
                     }
                 }
 
@@ -308,7 +308,7 @@ struct TripETACard: View {
                             .foregroundStyle(.white)
                     }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TeslaPressStyle())
         }
         .padding(16)
         .frame(width: 420)

@@ -98,12 +98,12 @@ struct RootView: View {
                             if settings.libraryOpen {
                                 SpotifyLibraryView()
                                     .padding(.top, 68)
-                                    .transition(.move(edge: .bottom))
+                                    .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                             if settings.settingsOpen {
                                 SettingsPanel()
                                     .padding(.top, 68)
-                                    .transition(.move(edge: .bottom))
+                                    .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
                         .clipped()
@@ -142,14 +142,14 @@ struct RootView: View {
 
     /// Icône voiture du dock = ouvre/ferme les Réglages sur « Commandes » (comme Tesla).
     private func toggleSettings() {
-        withAnimation(.spring(duration: 0.35)) {
+        withAnimation(Motion.panel) {
             if !settings.settingsOpen { settings.selectedSection = .controls }
             settings.settingsOpen.toggle()
         }
     }
 
     private func openApp(_ app: DockApp) {
-        withAnimation(.spring(duration: 0.35)) {
+        withAnimation(Motion.panel) {
             switch app {
             case .navigation:
                 settings.settingsOpen = false
@@ -220,7 +220,7 @@ struct PanelDivider: View {
                 .onEnded { _ in startRatio = nil }
         )
         .onTapGesture(count: 2) {
-            withAnimation(.spring(duration: 0.35)) { settings.carPanelRatio = 0.33 }
+            withAnimation(Motion.panel) { settings.carPanelRatio = 0.33 }
         }
         .accessibilityLabel("Séparateur voiture / carte")
     }

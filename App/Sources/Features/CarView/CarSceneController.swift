@@ -30,7 +30,8 @@ final class CarSceneController: NSObject {
     private var roll = Spring(), pitch = Spring()
     private var wheelAngle: Float = 0
     private var steerAngle: Float = 0
-    private var doorFLAngle: Float = 0, doorFRAngle: Float = 0, hoodAngle: Float = 0, trunkAngle: Float = 0
+    private var doorFL_s = Spring(stiffness: 28, damping: 7.5), doorFR_s = Spring(stiffness: 28, damping: 7.5)
+    private var hood_s = Spring(stiffness: 24, damping: 7), trunk_s = Spring(stiffness: 24, damping: 7)
     private var camPos = SIMD3<Float>(0, 3, -7.5)
     private var camTarget = SIMD3<Float>(0, 0.6, 4)
     private var lastBraking = false
@@ -49,6 +50,10 @@ final class CarSceneController: NSObject {
     private var perfElapsed: Float = 0
 
     var cameraMode: CameraMode = .parked
+    /// Zones masquées par l'interface (points) : HUD en haut, lecteur Spotify en bas.
+    /// La caméra cadre la voiture dans l'espace libre restant, quelle que soit la taille du panneau.
+    var topInset: CGFloat = 260
+    var bottomInset: CGFloat = 240
     var showLanes = true
     /// Finition « argile » gris clair façon visualisation Tesla, ou peinture d'origine.
     var clayFinish = false {
@@ -92,6 +97,19 @@ final class CarSceneController: NSObject {
         }
         Task { await loadCar() }
         installGestures()
+        enableHighFrameRate()
+    }
+
+    /// ProMotion : demande 120 i/s au rendu RealityKit si possible (sinon 60, limite d'Apple).
+    private func enableHighFrameRate() {
+        let maxFPS = UIScreen.main.maximumFramesPerSecond
+        let selector = NSSelectorFromString("setPreferredFramesPerSecond:")
+        if arView.responds(to: selector) {
+            arView.setValue(maxFPS, forKey: "preferredFramesPerSecond")
+            Log.info(.perf, "Rendu 3D demandé à \(maxFPS) i/s")
+        } else {
+            Log.info(.perf, "Écran \(maxFPS) Hz · le rendu RealityKit ne permet pas de changer la cadence")
+        }
     }
 
     // MARK: - Gestes d'orbite
@@ -253,8 +271,8 @@ final class CarSceneController: NSObject {
         let speed = Float(v.speedKmh / 3.6)
 
         // Caisse : ressort-amortisseur (≈3° de roulis par g latéral, 2° de tangage par g)
-        roll.target = Float(v.lateralG) * 3 * .pi / 180
-        pitch.target = -Float(v.longitudinalG) * 2 * .pi / 180
+        roll.target = Float(v.lateralG) * 6 * .pi / 180
+        pitch.target = -Float(v.longitudinalG) * 4.5 * .pi / 180
         roll.step(dt); pitch.step(dt)
         sprung?.orientation = simd_quatf(angle: roll.value, axis: [0, 0, 1])
             * simd_quatf(angle: pitch.value, axis: [1, 0, 0])
@@ -272,14 +290,19 @@ final class CarSceneController: NSObject {
         steer["FR"]?.orientation = simd_quatf(angle: steerAngle, axis: [0, 1, 0])
 
         // Ouvrants
-        doorFLAngle = approach(doorFLAngle, v.doorFLOpen ? -65 : 0, dt)
-        doorFRAngle = approach(doorFRAngle, v.doorFROpen ? 65 : 0, dt)
-        hoodAngle = approach(hoodAngle, v.hoodOpen ? -55 : 0, dt)
-        trunkAngle = approach(trunkAngle, v.trunkOpen ? 70 : 0, dt)
-        rotate(doorFL, doorFLAngle, [0, 1, 0])
-        rotate(doorFR, doorFRAngle, [0, 1, 0])
-        rotate(hood, hoodAngle, [1, 0, 0])
-        rotate(trunk, trunkAngle, [1, 0, 0])
+        doorFL_s.target = v.doorFLOpen ? -65 : 0
+        doorFR_s.target = v.doorFROpen ? 65 : 0
+        hood_s.target = v.hoodOpen ? -55 : 0
+        trunk_s.target = v.trunkOpen ? 70 : 0
+        for i in 0..<2 {   // 2 sous-pas : stable même si une image dure longtemps
+            let h = min(dt, 0.05) / 2
+            _ = i
+            doorFL_s.step(h); doorFR_s.step(h); hood_s.step(h); trunk_s.step(h)
+        }
+        rotate(doorFL, doorFL_s.value, [0, 1, 0])
+        rotate(doorFR, doorFR_s.value, [0, 1, 0])
+        rotate(hood, hood_s.value, [1, 0, 0])
+        rotate(trunk, trunk_s.value, [1, 0, 0])
 
         // Feux
         let blinkOn = Int(time * 3) % 2 == 0
@@ -334,10 +357,16 @@ final class CarSceneController: NSObject {
 
     /// Caméra en coordonnées sphériques autour d'une cible ; l'orbite de l'utilisateur s'ajoute.
     /// En conduite, elle revient seule à la vue arrière 6 s après le dernier geste.
+    private static let vFOV: Float = 38 * .pi / 180
+
+    /// Caméra en coordonnées sphériques autour de la voiture. La distance est calculée pour que
+    /// la voiture (et les voies en conduite) tienne en largeur ET en hauteur dans la zone libre
+    /// du panneau : un panneau étroit recule la caméra, un panneau large la rapproche.
+    /// L'orbite de l'utilisateur s'ajoute ; en conduite elle revient seule 6 s après le dernier geste.
     private func updateCamera(dt: Float) {
-        let (target, azimuth, elevation, distance): (SIMD3<Float>, Float, Float, Float) = switch cameraMode {
-        case .drive: ([0, 0.5, 2.0], .pi, 0.36, 10.5)
-        case .parked: ([0, 0.55, 0], 0.67, 0.23, 7.6)
+        let (center, azimuth, elevation, width, height): (SIMD3<Float>, Float, Float, Float, Float) = switch cameraMode {
+        case .drive: ([0, 0.5, 1.2], .pi, 0.34, 4.8, 2.6)      // voiture + voies
+        case .parked: ([0, 0.6, 0], 0.67, 0.22, 4.6, 2.2)
         }
         if cameraMode == .drive, Date().timeIntervalSince(lastTouch) > 6 {
             let k = min(1, dt * 1.5)
@@ -345,13 +374,30 @@ final class CarSceneController: NSObject {
             userElevation -= userElevation * k
             userZoom += (1 - userZoom) * k
         }
-        let az = azimuth + userAzimuth
+
+        let size = arView.bounds.size
+        let viewH = Float(max(size.height, 1)), viewW = Float(max(size.width, 1))
+        let freeH = max(viewH - Float(topInset + bottomInset), viewH * 0.35)
+        let freeFraction = freeH / viewH
+        let tanV = tan(Self.vFOV / 2)
+        let tanH = tanV * viewW / viewH
+        let fitWidth = (width / 2) / tanH
+        let fitHeight = (height / 2) / (tanV * freeFraction)
+        let distance = max(fitWidth, fitHeight, 5) * 1.08 * userZoom
+
+        // Décale le point visé pour centrer la voiture dans la zone libre (et non dans tout le panneau)
+        let shiftFraction = Float(bottomInset - topInset) / viewH / 2      // > 0 : centre libre plus haut
         let el = max(0.05, min(1.35, elevation + userElevation))
-        let d = distance * userZoom
-        let pos = target + d * SIMD3(sin(az) * cos(el), sin(el), cos(az) * cos(el))
-        let a = min(1, dt * 6)
+        let verticalShift = shiftFraction * 2 * distance * tanV / max(cos(el), 0.3)
+        let target = center - SIMD3(0, verticalShift, 0)
+
+        let az = azimuth + userAzimuth
+        let pos = target + distance * SIMD3(sin(az) * cos(el), sin(el), cos(az) * cos(el))
+        // Transitions caméra plus amples (P ↔ D), suivi du doigt réactif
+        let follow: Float = Date().timeIntervalSince(lastTouch) < 0.3 ? 14 : 3.2
+        let a = 1 - exp(-dt * follow)
         camPos += (pos - camPos) * a
-        camTarget += (target - camTarget) * min(1, dt * 2.5)
+        camTarget += (target - camTarget) * (1 - exp(-dt * 3.2))
         camera.look(at: camTarget, from: camPos, relativeTo: nil)
     }
 
@@ -405,8 +451,8 @@ struct Spring {
     var value: Float = 0
     var velocity: Float = 0
     var target: Float = 0
-    var stiffness: Float = 60
-    var damping: Float = 11
+    var stiffness: Float = 42
+    var damping: Float = 6.5
 
     mutating func step(_ dt: Float) {
         let a = stiffness * (target - value) - damping * velocity

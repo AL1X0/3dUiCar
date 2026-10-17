@@ -12,9 +12,9 @@ struct SettingsPanel: View {
             .onChanged { drag = max(0, $0.translation.height) }
             .onEnded { g in
                 if drag > 90 || g.predictedEndTranslation.height > 260 {
-                    withAnimation(.spring(duration: 0.3)) { settings.settingsOpen = false }
+                    withAnimation(Motion.panel) { settings.settingsOpen = false }
                 }
-                withAnimation(.spring(duration: 0.3)) { drag = 0 }
+                withAnimation(Motion.panel) { drag = 0 }
             }
     }
 
@@ -67,7 +67,7 @@ struct SettingsPanel: View {
                                     in: RoundedRectangle(cornerRadius: 4))
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TeslaPressStyle())
                 }
             }
             .padding(.horizontal, 16)
@@ -110,14 +110,14 @@ struct SettingsHeader: View {
             indicator("antenna.radiowaves.left.and.right", on: vehicle.obdConnected, color: Theme.teal)
             indicator("music.note", on: spotify.isConnected, color: Theme.telltaleGreen)
             Button {
-                withAnimation(.spring(duration: 0.35)) { settings.settingsOpen = false }
+                withAnimation(Motion.panel) { settings.settingsOpen = false }
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(palette.textSecondary)
                     .frame(width: 44, height: 44)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TeslaPressStyle())
         }
         .padding(.leading, 32)
         .padding(.trailing, 16)

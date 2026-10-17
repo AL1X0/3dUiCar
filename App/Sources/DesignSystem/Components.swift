@@ -41,7 +41,7 @@ struct SettingsTitle: View {
                 Button(link, action: linkAction)
                     .font(TeslaFont.ui(14, .semibold))
                     .foregroundStyle(Theme.accent)
-                    .buttonStyle(.plain)
+                    .buttonStyle(TeslaPressStyle())
             }
         }
     }
@@ -104,7 +104,7 @@ struct TeslaSegmented<Value: Hashable>: View {
                     .background(selected ? (colorScheme == .dark ? palette.inactive.opacity(0.6) : .white) : .clear)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TeslaPressStyle())
                 if index < options.count - 1 {
                     Rectangle().fill(palette.outline).frame(width: 1)
                 }
@@ -145,7 +145,7 @@ struct TileButton: View {
             .background(palette.panelSecondary.opacity(0.35))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TeslaPressStyle())
     }
 }
 
@@ -183,7 +183,7 @@ struct AccentButton: View {
             .background(isOn ? Theme.accent : palette.panelSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 4))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TeslaPressStyle())
     }
 }
 
@@ -312,9 +312,9 @@ private struct SwipeToDismiss: ViewModifier {
                     .onEnded { value in
                         let predicted = amount(value.predictedEndTranslation)
                         if drag > threshold || predicted > threshold * 2 {
-                            withAnimation(.spring(duration: 0.3)) { action() }
+                            withAnimation(Motion.panel) { action() }
                         }
-                        withAnimation(.spring(duration: 0.3)) { drag = 0 }
+                        withAnimation(Motion.panel) { drag = 0 }
                     }
             )
     }
@@ -333,5 +333,23 @@ struct GrabHandle: View {
     @Environment(\.palette) private var palette
     var body: some View {
         Capsule().fill(palette.inactive).frame(width: 40, height: 5).padding(.vertical, 6)
+    }
+}
+
+// MARK: - Mouvement
+
+/// Ressorts communs : vifs, avec un léger rebond (fluides à 120 Hz sur écran ProMotion).
+enum Motion {
+    static let panel = Animation.spring(duration: 0.42, bounce: 0.22)
+    static let quick = Animation.spring(duration: 0.28, bounce: 0.3)
+}
+
+/// Retour visuel à l'appui : l'élément se contracte puis rebondit.
+struct TeslaPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.9 : 1)
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .animation(.spring(duration: 0.25, bounce: 0.45), value: configuration.isPressed)
     }
 }
