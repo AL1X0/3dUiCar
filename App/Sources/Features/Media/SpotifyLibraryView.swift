@@ -48,6 +48,8 @@ struct SpotifyLibraryView: View {
 
                 Spacer()
 
+                SpotifyDeviceMenu()
+
                 Button {
                     withAnimation(.spring(duration: 0.3)) {
                         settings.libraryOpen = false

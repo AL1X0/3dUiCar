@@ -15,6 +15,26 @@ struct SpotifyItem: Identifiable, Hashable {
     var imageURL: URL? = nil
 }
 
+/// Appareil Spotify Connect (iPad, iPhone, ordinateur, enceinte…).
+struct SpotifyDevice: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let type: String
+    let isActive: Bool
+
+    var symbol: String {
+        switch type.lowercased() {
+        case "tablet": "ipad.landscape"
+        case "smartphone": "iphone"
+        case "computer": "laptopcomputer"
+        case "speaker": "hifispeaker.fill"
+        case "tv": "tv"
+        case "automobile": "car.fill"
+        default: "speaker.wave.2.fill"
+        }
+    }
+}
+
 struct SpotifySection: Identifiable, Hashable {
     let id: String
     let title: String
@@ -63,6 +83,13 @@ final class SpotifyController: NSObject {
     var searchResults: [SpotifyItem] = []
     var isSearching = false
 
+    // Appareils Spotify Connect
+    var devices: [SpotifyDevice] = []
+    /// Appareil choisi dans « Lire sur… » (mémorisé) ; nil = automatique (iPad en priorité).
+    var preferredDeviceID: String? {
+        didSet { UserDefaults.standard.set(preferredDeviceID, forKey: "SpotifyPreferredDevice") }
+    }
+
     var clientID: String {
         didSet { UserDefaults.standard.set(clientID, forKey: "SpotifyClientID") }
     }
@@ -80,11 +107,14 @@ final class SpotifyController: NSObject {
     @ObservationIgnored private var likesCheckAvailable = true
     @ObservationIgnored private var likedIDs: Set<String> = []
     @ObservationIgnored private var lastLibraryLoad = Date.distantPast
+    @ObservationIgnored private let waker = SpotifyWaker()
+    @ObservationIgnored private var lastDevicesLoad = Date.distantPast
 
     override init() {
         let bundled = Bundle.main.object(forInfoDictionaryKey: "SpotifyClientID") as? String ?? ""
         let stored = UserDefaults.standard.string(forKey: "SpotifyClientID") ?? ""
         clientID = stored.isEmpty ? bundled : stored
+        preferredDeviceID = UserDefaults.standard.string(forKey: "SpotifyPreferredDevice")
         super.init()
         isConnected = Keychain.get("spotify.refresh") != nil
         Log.info(.spotify, "Init · client \(clientID.prefix(6))… · compte \(isConnected ? "mémorisé" : "non connecté")")
@@ -176,7 +206,12 @@ final class SpotifyController: NSObject {
 
     /// Compatibilité : l'ancien flux App Remote revenait par URL ; plus utilisé.
     func handle(url: URL) {
-        Log.debug(.spotify, "URL reçue (ignorée, flux PKCE) : \(url.scheme ?? "")")
+        guard url.scheme == "car3dui" else { return }
+        Log.info(.spotify, "Retour automatique depuis Spotify")
+        Task {
+            try? await Task.sleep(for: .milliseconds(800))
+            await refreshState()
+        }
     }
 
     private func exchange(code: String, verifier: String) async {
@@ -276,6 +311,7 @@ final class SpotifyController: NSObject {
     // MARK: - État de lecture
 
     func refreshState() async {
+        if Date().timeIntervalSince(lastDevicesLoad) > 20 { _ = await fetchDevices() }
         let (status, data) = await api("GET", "/me/player", query: ["additional_types": "episode"])
         lastPoll = Date()
         if status == 204 {
@@ -420,49 +456,77 @@ final class SpotifyController: NSObject {
     /// 1. appareil actif ; 2. sinon l'iPad (ou le 1er appareil Spotify Connect) via `device_id` ;
     /// 3. sinon ouverture de l'app Spotify, et la lecture reprend au retour dans l'app.
     private func startPlayback(_ body: [String: Any]?, label: String, allowOpenApp: Bool) async {
-        if activeDeviceID != nil {
+        // 1. Appareil actif (sauf si l'utilisateur a choisi un autre appareil)
+        if let active = activeDeviceID, preferredDeviceID == nil || preferredDeviceID == active {
             let (status, _) = await api("PUT", "/me/player/play", body: body)
-            if (200..<300).contains(status) { refreshSoon(); return }
+            if (200..<300).contains(status) { lastError = nil; refreshSoon(); return }
             if status != 404 { refreshSoon(); return }
         }
-        let devices = await fetchDevices()
-        let target = devices.first { ($0["type"] as? String)?.lowercased() == "tablet" }
-            ?? devices.first { $0["is_active"] as? Bool == true } ?? devices.first
-        if let id = target?["id"] as? String {
+        // 2. Appareil choisi, sinon l'iPad, sinon le premier disponible, via device_id
+        let list = await fetchDevices()
+        if let target = pickDevice(list) {
             for attempt in 0..<3 {
-                let (status, _) = await api("PUT", "/me/player/play", query: ["device_id": id], body: body)
+                let (status, _) = await api("PUT", "/me/player/play", query: ["device_id": target.id], body: body)
                 if (200..<300).contains(status) {
-                    activeDeviceID = id
+                    activeDeviceID = target.id
                     lastError = nil
-                    Log.info(.spotify, "Lecture sur « \(target?["name"] as? String ?? "?") »")
+                    Log.info(.spotify, "Lecture sur « \(target.name) »")
                     refreshSoon()
                     return
                 }
                 if status != 404 && status != 502 { break }
-                try? await Task.sleep(for: .milliseconds(700 * (attempt + 1)))
+                try? await Task.sleep(for: .milliseconds(600 * (attempt + 1)))
             }
         }
+        // 3. Aucun appareil : Spotify dort sur l'iPad → réveil express (retour automatique ici)
         guard allowOpenApp else {
-            lastError = "Spotify ne répond pas : lance la lecture une fois dans l'app Spotify."
+            lastError = "Spotify ne répond pas. Réessaie dans un instant."
             return
         }
-        // Aucun appareil : iOS ne permet pas de réveiller Spotify en arrière-plan
-        pendingPlay = (body, label)
-        lastError = "Ouverture de Spotify… reviens ici, la lecture démarrera."
-        Log.info(.spotify, "Aucun appareil Spotify : ouverture de l'app, lecture en attente")
-        await UIApplication.shared.open(URL(string: "spotify:")!)
+        guard waker.isInstalled else {
+            lastError = "Installe l'app Spotify sur l'iPad (elle joue le son en arrière-plan)."
+            return
+        }
+        let uri = (body?["context_uri"] as? String) ?? ((body?["uris"] as? [String])?.first) ?? ""
+        // Après le retour, on renvoie la file d'attente complète (titres) ; un contexte joue déjà.
+        pendingPlay = body?["uris"] != nil ? (body, label) : nil
+        lastError = nil
+        waker.wake(clientID: clientID, playURI: uri)
     }
 
-    private func fetchDevices() async -> [[String: Any]] {
-        let (_, data) = await api("GET", "/me/player/devices")
-        let devices = (data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["devices"] as? [[String: Any]]) ?? []
-        let names = devices.map { d -> String in
-            let name = d["name"] as? String ?? "?"
-            let type = d["type"] as? String ?? "?"
-            return (d["is_active"] as? Bool) == true ? "\(name) (\(type), actif)" : "\(name) (\(type))"
+    /// Choix de l'appareil : préféré → iPad → actif → premier.
+    private func pickDevice(_ list: [SpotifyDevice]) -> SpotifyDevice? {
+        if let pref = preferredDeviceID, let d = list.first(where: { $0.id == pref }) { return d }
+        return list.first { $0.type.lowercased() == "tablet" } ?? list.first { $0.isActive } ?? list.first
+    }
+
+    /// « Lire sur… » : transfère la lecture en cours vers l'appareil choisi.
+    func transfer(to device: SpotifyDevice?) {
+        preferredDeviceID = device?.id
+        guard let device else { return }
+        Log.info(.spotify, "Lecture transférée vers « \(device.name) »")
+        Task {
+            await api("PUT", "/me/player", body: ["device_ids": [device.id], "play": isPlaying])
+            refreshSoon()
         }
-        Log.info(.spotify, "Appareils : \(names)")
-        return devices
+    }
+
+    func reloadDevices() { Task { _ = await fetchDevices() } }
+
+    private func fetchDevices() async -> [SpotifyDevice] {
+        lastDevicesLoad = Date()
+        let (_, data) = await api("GET", "/me/player/devices")
+        let raw = (data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["devices"] as? [[String: Any]]) ?? []
+        let list = raw.compactMap { d -> SpotifyDevice? in
+            guard let id = d["id"] as? String else { return nil }
+            return SpotifyDevice(id: id, name: d["name"] as? String ?? "?", type: d["type"] as? String ?? "",
+                                 isActive: d["is_active"] as? Bool ?? false)
+        }
+        if list.map(\.id) != devices.map(\.id) {
+            Log.info(.spotify, "Appareils : \(list.map { "\($0.name) (\($0.type))\($0.isActive ? " actif" : "")" })")
+        }
+        devices = list
+        return list
     }
 
     // MARK: - Bibliothèque

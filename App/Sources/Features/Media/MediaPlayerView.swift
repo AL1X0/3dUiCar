@@ -261,18 +261,7 @@ struct MediaPlayerView: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    if let url = URL(string: "spotify:"), UIApplication.shared.canOpenURL(url) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.forward.app")
-                        .font(.system(size: 16))
-                        .foregroundStyle(palette.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                SpotifyDeviceMenu()
             }
         }
     }

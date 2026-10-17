@@ -10,11 +10,16 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.6.1"
+    MARKETING_VERSION: "0.7.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
     CODE_SIGN_IDENTITY: ""
+
+packages:
+  SpotifyiOS:
+    url: https://github.com/spotify/ios-sdk
+    from: 5.0.1
 
 targets:
   Car3DUI:
@@ -23,6 +28,8 @@ targets:
     sources:
       - path: App/Sources
       - path: App/Resources
+    dependencies:
+      - package: SpotifyiOS
     scheme: {}
     # Clés non couvertes par GENERATE_INFOPLIST_FILE (fusionnées avec les INFOPLIST_KEY_*)
     info:
