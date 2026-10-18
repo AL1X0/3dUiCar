@@ -54,6 +54,8 @@ final class VehicleState {
     // Températures
     var outsideTempC: Double? = nil
     var coolantTempC: Double? = nil
+    var oilTempC: Double? = nil
+    var boostBar: Double? = nil       // pression turbo relative (MAP − atmosphère)
     var driverTempC: Double = 20
     var passengerTempC: Double = 20
 

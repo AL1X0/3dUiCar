@@ -186,6 +186,9 @@ struct RootView: View {
             vehicle.braking = false
             vehicle.speedLimitKmh = nil
             vehicle.rpm = nil
+            vehicle.coolantTempC = nil
+            vehicle.oilTempC = nil
+            vehicle.boostBar = nil
             sensors.start()
         }
     }

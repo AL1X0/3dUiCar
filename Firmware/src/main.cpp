@@ -78,7 +78,7 @@ static SignalValue g_signals[0x30];
 static portMUX_TYPE g_sigMux = portMUX_INITIALIZER_UNLOCKED;
 
 // --- Paramètres Système & État ---
-static const char* FW_VERSION = "0.1.0";
+static const char* FW_VERSION = "0.2.0";
 static volatile bool g_bleConnected = false;
 static uint16_t g_negotiatedMtu = 247;
 static volatile uint8_t g_signalSendRateHz = 20;
@@ -86,6 +86,10 @@ static volatile bool g_rawRecordingEnabled = false;
 static volatile uint8_t g_currentBus = 0; // 0 = HS (500k), 1 = MS (125k)
 static volatile uint32_t g_lastCanActivityMs = 0;
 static volatile bool g_twaiInstalled = false;
+// Compteurs de diagnostic remontés dans Info
+static volatile uint32_t g_rxFrames = 0;
+static volatile uint32_t g_txFails = 0;
+static volatile uint32_t g_busOffs = 0;
 
 // Instance BLE
 static NimBLEServer* g_pServer = nullptr;
@@ -160,6 +164,7 @@ void uninstallTwaiDriver();
 float readBatteryAdcVoltage();
 void setSignalValue(uint8_t id, float value);
 void updateInfoCharacteristic();
+void processReceivedFrame(const twai_message_t& rxMsg);
 
 // ============================================================================
 // PILOTE TWAI (CAN)
@@ -243,25 +248,50 @@ void setSignalValue(uint8_t id, float value) {
 
 void updateInfoCharacteristic() {
     if (!g_pCharInfo) return;
-    const char* busState = "silent";
-    if (g_twaiInstalled) {
-        twai_status_info_t status;
-        if (twai_get_status_info(&status) == ESP_OK) {
-            if (status.state == TWAI_STATE_RUNNING) {
-                busState = (millis() - g_lastCanActivityMs < 3000) ? "ok" : "silent";
-            } else {
-                busState = "error";
-            }
+    const char* busState = "error";
+    twai_status_info_t status = {};
+    if (g_twaiInstalled && twai_get_status_info(&status) == ESP_OK) {
+        if (status.state == TWAI_STATE_BUS_OFF || status.state == TWAI_STATE_RECOVERING) {
+            busState = "busoff";
+        } else if (status.state == TWAI_STATE_RUNNING) {
+            busState = (millis() - g_lastCanActivityMs < 3000) ? "ok" : "silent";
         }
-    } else {
-        busState = "error";
     }
 
-    char json[128];
+    char json[200];
     snprintf(json, sizeof(json),
-             "{\"fw\":\"%s\",\"bus\":\"%s\",\"hs\":500,\"ms\":125}",
-             FW_VERSION, busState);
+             "{\"fw\":\"%s\",\"bus\":\"%s\",\"kbps\":%u,\"rx\":%lu,\"txf\":%lu,\"tec\":%lu,\"rec\":%lu,\"boff\":%lu}",
+             FW_VERSION, busState, g_currentBus == 1 ? 125 : 500,
+             (unsigned long)g_rxFrames, (unsigned long)g_txFails,
+             (unsigned long)status.tx_error_counter, (unsigned long)status.rx_error_counter,
+             (unsigned long)g_busOffs);
     g_pCharInfo->setValue(reinterpret_cast<const uint8_t*>(json), strlen(json));
+    if (g_bleConnected) g_pCharInfo->notify();
+}
+
+// Relance le contrôleur après un bus-off (sinon il ne reçoit plus rien jusqu'au redémarrage)
+// et vide la file de réception même quand l'émission échoue.
+void serviceTwai() {
+    twai_status_info_t status;
+    if (twai_get_status_info(&status) == ESP_OK) {
+        if (status.state == TWAI_STATE_BUS_OFF) {
+            g_busOffs++;
+            Serial.println("[CAN] Bus-off, relance du contrôleur.");
+            twai_initiate_recovery();
+        } else if (status.state == TWAI_STATE_STOPPED) {
+            twai_start();
+        }
+    }
+    twai_message_t rxMsg;
+    while (twai_receive(&rxMsg, 0) == ESP_OK) {
+        processReceivedFrame(rxMsg);
+    }
+}
+
+void notifyDtc(const std::string& s) {
+    if (!g_pCharDtc) return;
+    g_pCharDtc->setValue(reinterpret_cast<const uint8_t*>(s.c_str()), s.length());
+    g_pCharDtc->notify();
 }
 
 // ============================================================================
@@ -342,6 +372,7 @@ class CommandCallbacks : public NimBLECharacteristicCallbacks {
 
 void processReceivedFrame(const twai_message_t& rxMsg) {
     g_lastCanActivityMs = millis();
+    g_rxFrames++;
 
     // 1. Décodage passif spécifique Ford
     if (!rxMsg.rtr) {
@@ -377,6 +408,8 @@ bool sendObdRequest(uint8_t mode, uint8_t pid, twai_message_t& outResponse, uint
     for (int i = 3; i < 8; ++i) txMsg.data[i] = 0x55; // Padding ISO standard
 
     if (twai_transmit(&txMsg, pdMS_TO_TICKS(10)) != ESP_OK) {
+        g_txFails++;
+        twai_clear_transmit_queue(); // pas d'acquittement : on n'empile pas les requêtes
         return false;
     }
 
@@ -443,12 +476,16 @@ void executeDtcRead() {
 
     if (twai_transmit(&txMsg, pdMS_TO_TICKS(20)) != ESP_OK) {
         Serial.println("[OBD] Échec émission requête DTC.");
+        g_txFails++;
+        twai_clear_transmit_queue();
+        notifyDtc("!Émission CAN impossible (bus absent ou non acquitté)");
         return;
     }
 
     std::vector<uint8_t> dtcBytes;
     uint32_t startMs = millis();
     bool isMultiFrame = false;
+    bool answered = false;
     uint16_t totalLength = 0;
     uint32_t ecuResponseId = 0x7E8;
 
@@ -462,6 +499,7 @@ void executeDtcRead() {
 
                 // Single Frame (PCI = 0x0X)
                 if (pci == 0x00 && rx.data[1] == 0x43) {
+                    answered = true;
                     uint8_t count = rx.data[0] & 0x0F;
                     for (int i = 2; i < 1 + count && i < 8; ++i) {
                         dtcBytes.push_back(rx.data[i]);
@@ -471,6 +509,7 @@ void executeDtcRead() {
                 // First Frame ISO-TP (PCI = 0x1X)
                 else if (pci == 0x10 && rx.data[2] == 0x43) {
                     isMultiFrame = true;
+                    answered = true;
                     totalLength = ((rx.data[0] & 0x0F) << 8) | rx.data[1];
                     ecuResponseId = rx.identifier;
                     for (int i = 3; i < 8; ++i) {
@@ -514,10 +553,7 @@ void executeDtcRead() {
     }
 
     Serial.printf("[OBD] Résultat DTCs : '%s'\n", dtcResult.c_str());
-    if (g_pCharDtc) {
-        g_pCharDtc->setValue(reinterpret_cast<const uint8_t*>(dtcResult.c_str()), dtcResult.length());
-        g_pCharDtc->notify();
-    }
+    notifyDtc(answered ? dtcResult : std::string("!Aucune réponse du calculateur (contact mis ?)"));
 }
 
 // ============================================================================
@@ -632,6 +668,7 @@ void obdPollerTask(void* pvParameters) {
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
         }
+        serviceTwai();
 
         twai_message_t rxMsg;
 
@@ -881,7 +918,7 @@ void setup() {
     // Caractéristique Info (read)
     g_pCharInfo = pService->createCharacteristic(
         CHAR_INFO_UUID,
-        NIMBLE_PROPERTY::READ
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
     );
     updateInfoCharacteristic();
 
@@ -904,7 +941,7 @@ void setup() {
     xTaskCreatePinnedToCore(obdPollerTask, "ObdPoller", 4096, nullptr, 3, nullptr, 1);
     xTaskCreatePinnedToCore(signalsSenderTask, "SigSender", 3072, nullptr, 2, nullptr, 0);
     xTaskCreatePinnedToCore(rawRecorderTask, "RawRecorder", 3072, nullptr, 1, nullptr, 0);
-    xTaskCreatePinnedToCore(powerManagementTask, "PowerMgmt", 2048, nullptr, 1, nullptr, 0);
+    xTaskCreatePinnedToCore(powerManagementTask, "PowerMgmt", 4096, nullptr, 1, nullptr, 0);
 
     Serial.println("[SYS] Système prêt et opérationnel.");
 }

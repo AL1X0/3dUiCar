@@ -75,6 +75,9 @@ struct CarHUDView: View {
                 }
             }
 
+            EngineGauges()
+                .animation(.easeOut(duration: 0.3), value: vehicle.rpm == nil)
+
             // Row 3: Telltales column and blinker indicators
             VStack(alignment: .leading, spacing: 14) {
                 if vehicle.blinkerLeft || vehicle.blinkerRight {

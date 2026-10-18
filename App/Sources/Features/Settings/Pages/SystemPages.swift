@@ -25,6 +25,15 @@ struct ServicePage: View {
         }
     }
 
+    private func busText(_ bus: String) -> String {
+        switch bus {
+        case "ok": "Trames reçues"
+        case "silent": "Aucune trame (contact coupé ou câblage)"
+        case "busoff": "Bus en défaut (CANH/CANL inversés ?)"
+        default: "Contrôleur CAN en erreur"
+        }
+    }
+
     var body: some View {
         SettingsPage {
             SettingsTitle(title: "Module OBD ESP32")
@@ -37,10 +46,18 @@ struct ServicePage: View {
                     .font(TeslaFont.ui(15))
                     .foregroundStyle(palette.textPrimary)
                 Spacer()
-                Text(esp32.firmwareInfo)
-                    .font(TeslaFont.ui(12))
-                    .foregroundStyle(palette.textSecondary)
-                    .lineLimit(1)
+                if let fw = esp32.canDiag["fw"] as? String {
+                    Text("Firmware \(fw)")
+                        .font(TeslaFont.ui(12))
+                        .foregroundStyle(palette.textSecondary)
+                }
+            }
+
+            if let bus = esp32.canDiag["bus"] as? String {
+                InfoRow(label: "Bus CAN", value: busText(bus))
+                InfoRow(label: "Trames reçues", value: "\(esp32.canDiag["rx"] as? Int ?? 0)")
+                InfoRow(label: "Erreurs émission / réception",
+                        value: "\(esp32.canDiag["tec"] as? Int ?? 0) / \(esp32.canDiag["rec"] as? Int ?? 0)")
             }
 
             SettingsDivider()
@@ -56,7 +73,11 @@ struct ServicePage: View {
                 }
             }
 
-            if let codes = esp32.dtcCodes {
+            if let error = esp32.dtcError {
+                Text(error)
+                    .font(TeslaFont.ui(15))
+                    .foregroundStyle(Theme.warningRed)
+            } else if let codes = esp32.dtcCodes {
                 if codes.isEmpty {
                     Text("Aucun code défaut")
                         .font(TeslaFont.ui(15))

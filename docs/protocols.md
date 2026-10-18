@@ -44,8 +44,8 @@ Contrat commun entre l'app iPad (`App/`), l'app iPhone compagnon (`Companion/`) 
 | Signals | `6E3D0002-8C3B-4E4B-9A1F-3D5543415200` | notify | paquets de signaux (ci-dessous) |
 | Command | `6E3D0003-8C3B-4E4B-9A1F-3D5543415200` | write | 1 octet de commande + paramètres |
 | Raw | `6E3D0004-8C3B-4E4B-9A1F-3D5543415200` | notify | trames CAN brutes (mode enregistrement) |
-| Info | `6E3D0005-8C3B-4E4B-9A1F-3D5543415200` | read | JSON `{"fw":"0.1.0","bus":"ok"|"silent"|"error","hs":500,"ms":125}` |
-| DTC | `6E3D0006-8C3B-4E4B-9A1F-3D5543415200` | notify | codes défaut ASCII séparés par `,` (ex. `P0301,P0420`), vide = aucun |
+| Info | `6E3D0005-8C3B-4E4B-9A1F-3D5543415200` | read, notify (5 s) | JSON `{"fw":"0.2.0","bus":"ok"|"silent"|"busoff"|"error","kbps":500,"rx":<trames reçues>,"txf":<échecs émission>,"tec":<err. TX>,"rec":<err. RX>,"boff":<bus-off>}` |
+| DTC | `6E3D0006-8C3B-4E4B-9A1F-3D5543415200` | notify | codes défaut ASCII séparés par `,` (ex. `P0301,P0420`), vide = aucun, `!message` = erreur (pas de réponse, émission impossible) |
 
 ### Paquet Signals (little-endian)
 

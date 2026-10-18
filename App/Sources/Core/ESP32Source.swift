@@ -17,6 +17,10 @@ final class ESP32Source: NSObject {
 
     private(set) var state: State = .off
     private(set) var firmwareInfo = ""
+    /// Diagnostic CAN envoyé par le module (Info, toutes les 5 s).
+    private(set) var canDiag: [String: Any] = [:]
+    /// Erreur renvoyée par « Lire les codes » (message préfixé par « ! » côté firmware).
+    private(set) var dtcError: String?
     private(set) var dtcCodes: [String]?
     private(set) var recording = false
     private(set) var recordedFrames = 0
@@ -59,8 +63,13 @@ final class ESP32Source: NSObject {
 
     // MARK: - Commandes
 
-    func readDTC() { send([0x01]) }
-    func clearDTC() { send([0x02]); dtcCodes = nil }
+    func readDTC() {
+        dtcCodes = nil
+        dtcError = nil
+        Log.info(.obd, "Lecture des codes défaut demandée")
+        send([0x01])
+    }
+    func clearDTC() { send([0x02]); dtcCodes = nil; dtcError = nil }
 
     /// Enregistre les trames CAN brutes dans Documents/can-<date>.csv (bus 0 = HS, 1 = MS).
     func setRecording(_ on: Bool, bus: UInt8 = 0) {
@@ -109,6 +118,8 @@ final class ESP32Source: NSObject {
             vehicle.speedKmh = v
             vehicle.set(\.speedSource, .obd)
         case 0x03: vehicle.coolantTempC = v
+        case 0x09: vehicle.boostBar = (v - 101.3) / 100
+        case 0x0B: vehicle.oilTempC = v
         case 0x07: vehicle.fuelLevel = max(0, min(1, v / 100))
         case 0x20: vehicle.blinkerLeft = on
         case 0x21: vehicle.blinkerRight = on
@@ -139,6 +150,17 @@ final class ESP32Source: NSObject {
         let best = Self.kmhPer1000.enumerated().min { abs($0.element - ratio) < abs($1.element - ratio) }
         manualGear = best.map { $0.offset + 1 }
         if vehicle.gear != .reverse { vehicle.gear = .drive }
+    }
+
+    private func decodeInfo(_ data: Data) {
+        firmwareInfo = String(decoding: data, as: UTF8.self)
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
+        let oldBus = canDiag["bus"] as? String
+        canDiag = json
+        // Au journal : chaque changement d'état du bus, avec les compteurs pour le diagnostic.
+        if let bus = json["bus"] as? String, bus != oldBus {
+            Log.info(.obd, "Bus CAN \(bus) — \(firmwareInfo)")
+        }
     }
 
     private func decodeRaw(_ data: Data) {
@@ -203,6 +225,10 @@ extension ESP32Source: CBCentralManagerDelegate, CBPeripheralDelegate {
         command = nil
         vehicle.set(\.obdConnected, false)
         vehicle.set(\.rpm, nil)
+        vehicle.set(\.coolantTempC, nil)
+        vehicle.set(\.oilTempC, nil)
+        vehicle.set(\.boostBar, nil)
+        canDiag = [:]
         manualGear = nil
         state = wanted ? .scanning : .off
         scanIfPossible()
@@ -221,7 +247,9 @@ extension ESP32Source: CBCentralManagerDelegate, CBPeripheralDelegate {
             for c in service.characteristics ?? [] {
                 switch c.uuid {
                 case Self.commandChar: command = c
-                case Self.infoChar: peripheral.readValue(for: c)
+                case Self.infoChar:
+                    peripheral.readValue(for: c)
+                    if c.properties.contains(.notify) { peripheral.setNotifyValue(true, for: c) }
                 case Self.signalsChar, Self.rawChar, Self.dtcChar: peripheral.setNotifyValue(true, for: c)
                 default: break
                 }
@@ -239,10 +267,16 @@ extension ESP32Source: CBCentralManagerDelegate, CBPeripheralDelegate {
             switch uuid {
             case Self.signalsChar: decodeSignals(data)
             case Self.rawChar: decodeRaw(data)
-            case Self.infoChar: firmwareInfo = String(decoding: data, as: UTF8.self)
+            case Self.infoChar: decodeInfo(data)
             case Self.dtcChar:
                 let s = String(decoding: data, as: UTF8.self)
-                dtcCodes = s.isEmpty ? [] : s.split(separator: ",").map(String.init)
+                if s.hasPrefix("!") {
+                    dtcError = String(s.dropFirst())
+                    Log.warning(.obd, "Codes défaut : \(s.dropFirst())")
+                } else {
+                    dtcCodes = s.isEmpty ? [] : s.split(separator: ",").map(String.init)
+                    Log.info(.obd, "Codes défaut : \(s.isEmpty ? "aucun" : s)")
+                }
             default: break
             }
         }

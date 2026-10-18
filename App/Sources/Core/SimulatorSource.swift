@@ -146,6 +146,9 @@ final class SimulatorSource {
         } else {
             vehicle.set(\.rpm, 800.0)
         }
+        vehicle.set(\.coolantTempC, 90.0)
+        vehicle.set(\.oilTempC, (95.0 + vehicle.speedKmh * 0.1).rounded())
+        vehicle.set(\.boostBar, (max(-0.6, min(1.4, longG * 4)) * 10).rounded() / 10)
     }
 
     private func smoothstep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
