@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "0.8.2",
+          "buildVersion": "31",
+          "date": "2026-10-18T16:19:20Z",
+          "localizedDescription": "Jauges moteur façon CarPlay Ultra (régime, huile, eau, turbo) ; diagnostic du bus CAN dans Service ; « Lire les codes » affiche toujours un résultat ou une erreur.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.2/Car3DUI.ipa",
+          "size": 9856618,
+          "minOSVersion": "18.0"
+        },
+        {
           "version": "0.8.1",
           "buildVersion": "29",
           "date": "2026-10-17T10:41:37Z",
@@ -119,11 +128,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local reçoit le GPS de l'iPhone compagnon."
         }
       },
-      "version": "0.8.1",
-      "versionDate": "2026-10-17T10:41:37Z",
-      "versionDescription": "Spotify n'est plus coupé au retour dans l'app (session audio mixable). Clignotants placés sur les vrais feux. Lignes bleues qui suivent la route réelle (itinéraire ou route détectée via la carte).",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.1/Car3DUI.ipa",
-      "size": 9826572,
+      "version": "0.8.2",
+      "versionDate": "2026-10-18T16:19:20Z",
+      "versionDescription": "Jauges moteur façon CarPlay Ultra (régime, huile, eau, turbo) ; diagnostic du bus CAN dans Service ; « Lire les codes » affiche toujours un résultat ou une erreur.",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.2/Car3DUI.ipa",
+      "size": 9856618,
       "screenshotURLs": [],
       "permissions": []
     },
@@ -138,6 +147,15 @@
       "category": "utilities",
       "screenshots": [],
       "versions": [
+        {
+          "version": "0.8.2",
+          "buildVersion": "31",
+          "date": "2026-10-18T16:19:20Z",
+          "localizedDescription": "Jauges moteur façon CarPlay Ultra (régime, huile, eau, turbo) ; diagnostic du bus CAN dans Service ; « Lire les codes » affiche toujours un résultat ou une erreur.",
+          "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.2/Car3DUICompanion.ipa",
+          "size": 1320137,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "0.8.1",
           "buildVersion": "29",
@@ -210,11 +228,11 @@
           "NSLocalNetworkUsageDescription": "Le réseau local sert à trouver l'iPad et lui envoyer la position."
         }
       },
-      "version": "0.8.1",
-      "versionDate": "2026-10-17T10:41:37Z",
-      "versionDescription": "Spotify n'est plus coupé au retour dans l'app (session audio mixable). Clignotants placés sur les vrais feux. Lignes bleues qui suivent la route réelle (itinéraire ou route détectée via la carte).",
-      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.1/Car3DUICompanion.ipa",
-      "size": 1320139,
+      "version": "0.8.2",
+      "versionDate": "2026-10-18T16:19:20Z",
+      "versionDescription": "Jauges moteur façon CarPlay Ultra (régime, huile, eau, turbo) ; diagnostic du bus CAN dans Service ; « Lire les codes » affiche toujours un résultat ou une erreur.",
+      "downloadURL": "https://github.com/AL1X0/3dUiCar/releases/download/v0.8.2/Car3DUICompanion.ipa",
+      "size": 1320137,
       "screenshotURLs": [],
       "permissions": []
     }
