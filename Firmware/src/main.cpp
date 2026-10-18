@@ -78,7 +78,7 @@ static SignalValue g_signals[0x30];
 static portMUX_TYPE g_sigMux = portMUX_INITIALIZER_UNLOCKED;
 
 // --- Paramètres Système & État ---
-static const char* FW_VERSION = "0.2.0";
+static const char* FW_VERSION = "0.3.0";
 static volatile bool g_bleConnected = false;
 static uint16_t g_negotiatedMtu = 247;
 static volatile uint8_t g_signalSendRateHz = 20;
@@ -838,6 +838,36 @@ void rawRecorderTask(void* pvParameters) {
     }
 }
 
+#ifdef RGB_BUILTIN
+/**
+ * @brief LED RGB de la carte = état du bus, visible sans l'app.
+ * Vert qui clignote : trames CAN reçues. Rouge : contrôleur en défaut (bus-off, câblage).
+ * Bleu : iPad connecté mais bus muet. Orange faible : en attente.
+ */
+void ledTask(void* pvParameters) {
+    // La DevKitC-1 a la LED sur GPIO 48 (v1.0) ou GPIO 38 (v1.1) : on pilote les deux.
+    static const uint8_t LED_PINS[] = { 48, 38 };
+    bool phase = false;
+    while (true) {
+        uint8_t r = 0, g = 0, b = 0;
+        twai_status_info_t st;
+        bool running = g_twaiInstalled && twai_get_status_info(&st) == ESP_OK && st.state == TWAI_STATE_RUNNING;
+        phase = !phase;
+        if (!running) {
+            r = 40;
+        } else if (millis() - g_lastCanActivityMs < 300) {
+            g = phase ? 40 : 0;
+        } else if (g_bleConnected) {
+            b = 30;
+        } else {
+            r = 12; g = 4;
+        }
+        for (uint8_t pin : LED_PINS) neopixelWrite(pin, r, g, b);
+        vTaskDelay(pdMS_TO_TICKS(80));
+    }
+}
+#endif
+
 /**
  * @brief Tâche de gestion d'énergie et mise en veille profonde.
  */
@@ -845,6 +875,7 @@ void powerManagementTask(void* pvParameters) {
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(5000));
         updateInfoCharacteristic();
+        if (g_pCharInfo) Serial.printf("[ETAT] %s\n", g_pCharInfo->getValue().c_str());
 
         uint32_t now = millis();
         // Condition d'endormissement : 60s sans trame CAN et aucun client BLE connecté
@@ -942,6 +973,9 @@ void setup() {
     xTaskCreatePinnedToCore(signalsSenderTask, "SigSender", 3072, nullptr, 2, nullptr, 0);
     xTaskCreatePinnedToCore(rawRecorderTask, "RawRecorder", 3072, nullptr, 1, nullptr, 0);
     xTaskCreatePinnedToCore(powerManagementTask, "PowerMgmt", 4096, nullptr, 1, nullptr, 0);
+#ifdef RGB_BUILTIN
+    xTaskCreatePinnedToCore(ledTask, "Led", 2048, nullptr, 1, nullptr, 0);
+#endif
 
     Serial.println("[SYS] Système prêt et opérationnel.");
 }
